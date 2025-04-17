@@ -12,8 +12,21 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  BarChart,
+  Bar,
+  Legend,
 } from "recharts";
-import { CheckCircle, AlertTriangle, AlertCircle } from "lucide-react";
+import { 
+  CheckCircle, 
+  AlertTriangle, 
+  AlertCircle, 
+  FileText, 
+  Share2, 
+  Download,
+  Printer
+} from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 
 interface CBCResultsProps {
   analysis: CBCAnalysis;
@@ -23,11 +36,11 @@ interface CBCResultsProps {
 const ResultStatusIcon = ({ status }: { status: string }) => {
   switch (status) {
     case "normal":
-      return <CheckCircle className="h-5 w-5 text-normal" />;
+      return <CheckCircle className="h-5 w-5 text-green-500" />;
     case "low":
-      return <AlertTriangle className="h-5 w-5 text-borderline" />;
+      return <AlertTriangle className="h-5 w-5 text-amber-500" />;
     case "high":
-      return <AlertCircle className="h-5 w-5 text-critical" />;
+      return <AlertCircle className="h-5 w-5 text-red-500" />;
     default:
       return null;
   }
@@ -48,24 +61,95 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
     const { min, max } = result.parameter.referenceRange;
     
     return {
-      name: language === "en" ? result.parameter.nameEn : result.parameter.nameUr,
+      name: result.parameter.id.toUpperCase(),
+      displayName: language === "en" ? result.parameter.nameEn : result.parameter.nameUr,
       value,
       min,
       max,
+      deviation: result.deviation,
+      status: result.status
     };
   });
 
+  // Create dataset for deviation chart
+  const deviationData = chartData.map(item => ({
+    name: item.name,
+    displayName: item.displayName,
+    deviation: item.deviation,
+    status: item.status
+  }));
+
+  // Helper function to get status color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'normal': return '#16a34a';  // green
+      case 'low': return '#eab308';     // amber
+      case 'high': return '#dc2626';    // red
+      default: return '#64748b';        // gray
+    }
+  };
+
+  // Group results by category
+  const categorizedResults = {
+    primary: analysis.results.filter(r => r.parameter.category === 'Primary'),
+    secondary: analysis.results.filter(r => r.parameter.category === 'Secondary'),
+    differential: analysis.results.filter(r => r.parameter.category === 'Differential')
+  };
+  
+  // Count abnormal results
+  const abnormalResults = analysis.results.filter(r => r.status !== 'normal');
+  
+  // Handle mock print function
+  const handlePrint = () => {
+    window.print();
+  };
+  
+  // Handle mock export function
+  const handleExport = () => {
+    alert(language === 'en' 
+      ? 'This feature will export the results as a PDF document.'
+      : 'یہ خصوصیت نتائج کو PDF دستاویز کے طور پر برآمد کرے گی۔');
+  };
+  
+  // Handle mock share function
+  const handleShare = () => {
+    alert(language === 'en'
+      ? 'This feature will allow sharing results via email or messaging.'
+      : 'یہ خصوصیت ای میل یا پیغام رسانی کے ذریعے نتائج کا اشتراک کرنے کی اجازت دے گی۔');
+  };
+
   return (
-    <div ref={resultRef} className="w-full mt-8">
-      <Card>
-        <CardHeader>
+    <div ref={resultRef} className="w-full mt-8 space-y-6 print:mt-0">
+      <div className="print:hidden flex justify-end space-x-2 mb-4">
+        <Button variant="outline" size="sm" onClick={handlePrint} className="flex items-center">
+          <Printer className="mr-2 h-4 w-4" />
+          {language === "en" ? "Print" : "پرنٹ کریں"}
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleExport} className="flex items-center">
+          <Download className="mr-2 h-4 w-4" />
+          {language === "en" ? "Export" : "برآمد کریں"}
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleShare} className="flex items-center">
+          <Share2 className="mr-2 h-4 w-4" />
+          {language === "en" ? "Share" : "شیئر کریں"}
+        </Button>
+      </div>
+      
+      <Card className="print:shadow-none">
+        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
           <CardTitle>
             {language === "en" ? "CBC Report Analysis" : "سی بی سی رپورٹ کا تجزیہ"}
           </CardTitle>
+          <div className="flex items-center space-x-1">
+            <FileText className="h-5 w-5 text-gray-500" />
+            <span className="text-sm text-gray-500">
+              {new Date().toLocaleDateString()}
+            </span>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Summary Alert */}
-          <Alert className={`${analysis.results.some(r => r.status !== "normal") ? "bg-medical-50" : "bg-green-50"}`}>
+          <Alert className={`${abnormalResults.length > 0 ? "bg-amber-50 border-amber-200" : "bg-green-50 border-green-200"}`}>
             <AlertTitle className="font-semibold">
               {language === "en" ? "Summary" : "خلاصہ"}
             </AlertTitle>
@@ -75,6 +159,56 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                 : analysis.summary.ur}
             </AlertDescription>
           </Alert>
+
+          {/* Key Metrics Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className={`shadow-sm border ${abnormalResults.length === 0 ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'}`}>
+              <CardContent className="pt-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-medium text-gray-700">{language === "en" ? "Parameters" : "پیرامیٹرز"}</h3>
+                  <span className="text-2xl font-bold">{analysis.results.length}</span>
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  {language === "en" 
+                    ? "Total parameters analyzed" 
+                    : "کل تجزیہ شدہ پیرامیٹرز"}
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card className="shadow-sm border border-red-200 bg-red-50">
+              <CardContent className="pt-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-medium text-gray-700">{language === "en" ? "Abnormal" : "غیر معمولی"}</h3>
+                  <span className="text-2xl font-bold">{abnormalResults.length}</span>
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  {language === "en" 
+                    ? "Parameters outside normal range" 
+                    : "معمول کی حد سے باہر پیرامیٹرز"}
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card className="shadow-sm border border-blue-200 bg-blue-50">
+              <CardContent className="pt-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-medium text-gray-700">{language === "en" ? "Deviation" : "انحراف"}</h3>
+                  <span className="text-2xl font-bold">
+                    {abnormalResults.length > 0 
+                      ? `${Math.abs(Math.round(abnormalResults.reduce((max, r) => 
+                          Math.abs(r.deviation) > Math.abs(max) ? r.deviation : max, 0)))}%` 
+                      : "0%"}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  {language === "en" 
+                    ? "Maximum parameter deviation" 
+                    : "زیادہ سے زیادہ پیرامیٹر انحراف"}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Chart Visualization */}
           <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
@@ -100,8 +234,8 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                     formatter={(value, name, props) => {
                       const item = props.payload;
                       return [
-                        `${value} (Range: ${item.min}-${item.max})`,
-                        name
+                        `${value} ${item.min && item.max ? `(Range: ${item.min}-${item.max})` : ''}`,
+                        item.displayName
                       ];
                     }}
                   />
@@ -110,7 +244,16 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                     dataKey="value"
                     stroke="#0284c7"
                     strokeWidth={2}
-                    dot={{ r: 6 }}
+                    dot={({ cx, cy, payload }) => (
+                      <circle 
+                        cx={cx} 
+                        cy={cy} 
+                        r={6} 
+                        fill={getStatusColor(payload.status)} 
+                        stroke="white" 
+                        strokeWidth={2}
+                      />
+                    )}
                     activeDot={{ r: 8 }}
                   />
                   {chartData.map((item, index) => (
@@ -135,6 +278,124 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
               </ResponsiveContainer>
             </div>
           </div>
+          
+          {/* Deviation Chart */}
+          {abnormalResults.length > 0 && (
+            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+              <h3 className="text-lg font-medium mb-4">
+                {language === "en" ? "Parameter Deviation Analysis" : "پیرامیٹر انحراف کا تجزیہ"}
+              </h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={deviationData.filter(d => d.status !== 'normal')}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="name" 
+                      angle={-45} 
+                      textAnchor="end"
+                      height={60} 
+                      tick={{ fontSize: 12 }} 
+                    />
+                    <YAxis 
+                      label={{ 
+                        value: language === "en" ? 'Deviation (%)' : 'انحراف (%)', 
+                        angle: -90, 
+                        position: 'insideLeft',
+                        style: { textAnchor: 'middle' }
+                      }} 
+                    />
+                    <Tooltip 
+                      formatter={(value, name, props) => {
+                        const item = props.payload;
+                        return [
+                          `${value.toFixed(1)}% ${value > 0 ? 'above' : 'below'} normal range`,
+                          item.displayName
+                        ];
+                      }}
+                    />
+                    <Bar 
+                      dataKey="deviation" 
+                      name={language === "en" ? "Deviation" : "انحراف"}
+                      fill="#8884d8"
+                      barSize={30}
+                      fill={({ status }) => getStatusColor(status)}
+                    />
+                    <Legend />
+                    <ReferenceLine y={0} stroke="#000" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+          
+          {/* Table View for Results */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-4 border-b border-gray-100">
+              <h3 className="text-lg font-medium">
+                {language === "en" ? "CBC Results Table" : "سی بی سی نتائج کا ٹیبل"}
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[200px]">
+                      {language === "en" ? "Parameter" : "پیرامیٹر"}
+                    </TableHead>
+                    <TableHead className="text-right">
+                      {language === "en" ? "Value" : "قدر"}
+                    </TableHead>
+                    <TableHead className="text-right">
+                      {language === "en" ? "Reference Range" : "حوالہ رینج"}
+                    </TableHead>
+                    <TableHead className="text-right">
+                      {language === "en" ? "Status" : "حالت"}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {analysis.results.map((result) => (
+                    <TableRow key={result.parameter.id}>
+                      <TableCell className="font-medium">
+                        {language === "en" ? result.parameter.nameEn : result.parameter.nameUr}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {result.parameter.value} {result.parameter.unit}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {result.parameter.referenceRange.min} - {result.parameter.referenceRange.max} {result.parameter.unit}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end space-x-2">
+                          <span className={`
+                            ${result.status === "normal" ? "text-green-700" : 
+                              result.status === "low" ? "text-amber-700" : "text-red-700"}
+                          `}>
+                            {language === "en" 
+                              ? result.status.charAt(0).toUpperCase() + result.status.slice(1) 
+                              : result.status === "normal" 
+                                ? "معمول کے مطابق"
+                                : result.status === "low" 
+                                  ? "کم"
+                                  : "زیادہ"}
+                            {result.status !== "normal" && (
+                              <span className="ml-1">
+                                ({result.deviation > 0 ? "+" : ""}{result.deviation.toFixed(1)}%)
+                              </span>
+                            )}
+                          </span>
+                          <ResultStatusIcon status={result.status} />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
 
           {/* Detailed Results */}
           <div className="space-y-4">
@@ -142,62 +403,210 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
               {language === "en" ? "Detailed Parameter Analysis" : "پیرامیٹر کا تفصیلی تجزیہ"}
             </h3>
             
-            {analysis.results.map((result) => (
-              <div 
-                key={result.parameter.id} 
-                className={`p-4 rounded-lg border ${
-                  result.status === "normal" 
-                    ? "border-green-200 bg-green-50" 
-                    : result.status === "low" 
-                    ? "border-yellow-200 bg-yellow-50"
-                    : "border-red-200 bg-red-50"
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-2">
-                    <ResultStatusIcon status={result.status} />
-                    <div>
-                      <h4 className="font-medium">
-                        {language === "en" ? result.parameter.nameEn : result.parameter.nameUr}
-                      </h4>
-                      <p className="text-sm text-gray-600">
-                        {result.parameter.value} {result.parameter.unit} 
-                        <span className="text-gray-500 ml-1">
-                          (
-                          {language === "en" ? "Reference: " : "حوالہ: "}
-                          {result.parameter.referenceRange.min}-{result.parameter.referenceRange.max} {result.parameter.unit}
-                          )
-                        </span>
-                      </p>
+            {/* Primary Parameters */}
+            {categorizedResults.primary.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-md font-medium text-gray-700">
+                  {language === "en" ? "Primary Parameters" : "بنیادی پیرامیٹرز"}
+                </h4>
+                {categorizedResults.primary.map((result) => (
+                  <div 
+                    key={result.parameter.id} 
+                    className={`p-4 rounded-lg border ${
+                      result.status === "normal" 
+                        ? "border-green-200 bg-green-50" 
+                        : result.status === "low" 
+                        ? "border-amber-200 bg-amber-50"
+                        : "border-red-200 bg-red-50"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-2">
+                        <ResultStatusIcon status={result.status} />
+                        <div>
+                          <h4 className="font-medium">
+                            {language === "en" ? result.parameter.nameEn : result.parameter.nameUr}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {result.parameter.value} {result.parameter.unit} 
+                            <span className="text-gray-500 ml-1">
+                              (
+                              {language === "en" ? "Reference: " : "حوالہ: "}
+                              {result.parameter.referenceRange.min}-{result.parameter.referenceRange.max} {result.parameter.unit}
+                              )
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`text-sm font-medium ${
+                        result.status === "normal" 
+                          ? "text-green-700" 
+                          : result.status === "low" 
+                          ? "text-amber-700"
+                          : "text-red-700"
+                      }`}>
+                        {language === "en" 
+                          ? result.status.charAt(0).toUpperCase() + result.status.slice(1) 
+                          : result.status === "normal" 
+                          ? "معمول کے مطابق"
+                          : result.status === "low" 
+                          ? "کم"
+                          : "زیادہ"}
+                        {result.status !== "normal" && (
+                          <span className="ml-1">
+                            ({result.deviation > 0 ? "+" : ""}{result.deviation.toFixed(1)}%)
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    <p className={`mt-2 text-sm ${language === "ur" ? "font-urdu text-right" : ""}`}>
+                      {language === "en" ? result.interpretation.en : result.interpretation.ur}
+                    </p>
                   </div>
-                  <div className={`text-sm font-medium ${
-                    result.status === "normal" 
-                      ? "text-green-700" 
-                      : result.status === "low" 
-                      ? "text-yellow-700"
-                      : "text-red-700"
-                  }`}>
-                    {language === "en" 
-                      ? result.status.charAt(0).toUpperCase() + result.status.slice(1) 
-                      : result.status === "normal" 
-                      ? "معمول کے مطابق"
-                      : result.status === "low" 
-                      ? "کم"
-                      : "زیادہ"}
-                    {result.status !== "normal" && (
-                      <span className="ml-1">
-                        ({result.deviation > 0 ? "+" : ""}{result.deviation.toFixed(1)}%)
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <p className={`mt-2 text-sm ${language === "ur" ? "font-urdu text-right" : ""}`}>
-                  {language === "en" ? result.interpretation.en : result.interpretation.ur}
-                </p>
+                ))}
               </div>
-            ))}
+            )}
+            
+            {/* Secondary Parameters */}
+            {categorizedResults.secondary.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-md font-medium text-gray-700">
+                  {language === "en" ? "Secondary Parameters" : "ثانوی پیرامیٹرز"}
+                </h4>
+                {categorizedResults.secondary.map((result) => (
+                  <div 
+                    key={result.parameter.id} 
+                    className={`p-4 rounded-lg border ${
+                      result.status === "normal" 
+                        ? "border-green-200 bg-green-50" 
+                        : result.status === "low" 
+                        ? "border-amber-200 bg-amber-50"
+                        : "border-red-200 bg-red-50"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-2">
+                        <ResultStatusIcon status={result.status} />
+                        <div>
+                          <h4 className="font-medium">
+                            {language === "en" ? result.parameter.nameEn : result.parameter.nameUr}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {result.parameter.value} {result.parameter.unit} 
+                            <span className="text-gray-500 ml-1">
+                              (
+                              {language === "en" ? "Reference: " : "حوالہ: "}
+                              {result.parameter.referenceRange.min}-{result.parameter.referenceRange.max} {result.parameter.unit}
+                              )
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`text-sm font-medium ${
+                        result.status === "normal" 
+                          ? "text-green-700" 
+                          : result.status === "low" 
+                          ? "text-amber-700"
+                          : "text-red-700"
+                      }`}>
+                        {language === "en" 
+                          ? result.status.charAt(0).toUpperCase() + result.status.slice(1) 
+                          : result.status === "normal" 
+                          ? "معمول کے مطابق"
+                          : result.status === "low" 
+                          ? "کم"
+                          : "زیادہ"}
+                        {result.status !== "normal" && (
+                          <span className="ml-1">
+                            ({result.deviation > 0 ? "+" : ""}{result.deviation.toFixed(1)}%)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <p className={`mt-2 text-sm ${language === "ur" ? "font-urdu text-right" : ""}`}>
+                      {language === "en" ? result.interpretation.en : result.interpretation.ur}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Differential WBC Count */}
+            {categorizedResults.differential.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-md font-medium text-gray-700">
+                  {language === "en" ? "Differential WBC Count" : "ڈفرنشیل ڈبلیو بی سی کاؤنٹ"}
+                </h4>
+                {categorizedResults.differential.map((result) => (
+                  <div 
+                    key={result.parameter.id} 
+                    className={`p-4 rounded-lg border ${
+                      result.status === "normal" 
+                        ? "border-green-200 bg-green-50" 
+                        : result.status === "low" 
+                        ? "border-amber-200 bg-amber-50"
+                        : "border-red-200 bg-red-50"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-2">
+                        <ResultStatusIcon status={result.status} />
+                        <div>
+                          <h4 className="font-medium">
+                            {language === "en" ? result.parameter.nameEn : result.parameter.nameUr}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {result.parameter.value} {result.parameter.unit} 
+                            <span className="text-gray-500 ml-1">
+                              (
+                              {language === "en" ? "Reference: " : "حوالہ: "}
+                              {result.parameter.referenceRange.min}-{result.parameter.referenceRange.max} {result.parameter.unit}
+                              )
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`text-sm font-medium ${
+                        result.status === "normal" 
+                          ? "text-green-700" 
+                          : result.status === "low" 
+                          ? "text-amber-700"
+                          : "text-red-700"
+                      }`}>
+                        {language === "en" 
+                          ? result.status.charAt(0).toUpperCase() + result.status.slice(1) 
+                          : result.status === "normal" 
+                          ? "معمول کے مطابق"
+                          : result.status === "low" 
+                          ? "کم"
+                          : "زیادہ"}
+                        {result.status !== "normal" && (
+                          <span className="ml-1">
+                            ({result.deviation > 0 ? "+" : ""}{result.deviation.toFixed(1)}%)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <p className={`mt-2 text-sm ${language === "ur" ? "font-urdu text-right" : ""}`}>
+                      {language === "en" ? result.interpretation.en : result.interpretation.ur}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+          
+          {/* Disclaimer */}
+          <Alert className="bg-gray-50 border-gray-200">
+            <AlertTitle className="font-semibold">
+              {language === "en" ? "Medical Disclaimer" : "طبی انتباہ"}
+            </AlertTitle>
+            <AlertDescription className={language === "ur" ? "font-urdu text-right" : ""}>
+              {language === "en" 
+                ? "This analysis is for informational purposes only and does not constitute medical advice. Please consult with a qualified healthcare professional for proper diagnosis and treatment."
+                : "یہ تجزیہ صرف معلوماتی مقاصد کے لیے ہے اور یہ طبی مشورہ نہیں ہے۔ مناسب تشخیص اور علاج کے لیے براہ کرم کسی قابل صحت کی دیکھ بھال کرنے والے پیشہ ور سے مشورہ کریں۔"}
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
     </div>

@@ -36,3 +36,23 @@ export interface CBCAnalysis {
   };
   results: CBCResult[];
 }
+
+export interface ExtractedCBCData {
+  patientName?: string;
+  patientAge?: number;
+  patientGender?: 'male' | 'female' | '';
+  parameters: {
+    id: string;
+    value: string;
+    unit: string;
+    referenceRange?: {
+      min: number;
+      max: number;
+    };
+  }[];
+}
+
+export interface OCRResult {
+  text: string;
+  confidence: number;
+}

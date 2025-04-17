@@ -12,8 +12,10 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CBCFormData, CBCParameter } from "@/types/cbc.types";
 import { getParameterReferenceRange } from "@/utils/cbc-reference-ranges";
+import PDFUploader from "./PDFUploader";
 
 interface CBCFormProps {
   language: string;
@@ -70,6 +72,78 @@ const CBCForm = ({ language, onSubmit }: CBCFormProps) => {
         unit: "× 10^9/L",
         referenceRange: { min: 0, max: 0 },
         category: "Primary"
+      },
+      {
+        id: "mcv",
+        nameEn: "Mean Corpuscular Volume (MCV)",
+        nameUr: "میان کارپسکولر والیوم (MCV)",
+        value: "",
+        unit: "fL",
+        referenceRange: { min: 0, max: 0 },
+        category: "Secondary"
+      },
+      {
+        id: "mch",
+        nameEn: "Mean Corpuscular Hemoglobin (MCH)",
+        nameUr: "میان کارپسکولر ہیموگلوبن (MCH)",
+        value: "",
+        unit: "pg",
+        referenceRange: { min: 0, max: 0 },
+        category: "Secondary"
+      },
+      {
+        id: "mchc",
+        nameEn: "MCHC",
+        nameUr: "ایم سی ایچ سی",
+        value: "",
+        unit: "g/dL",
+        referenceRange: { min: 0, max: 0 },
+        category: "Secondary"
+      },
+      {
+        id: "neutrophils",
+        nameEn: "Neutrophils",
+        nameUr: "نیوٹروفلز",
+        value: "",
+        unit: "%",
+        referenceRange: { min: 0, max: 0 },
+        category: "Differential"
+      },
+      {
+        id: "lymphocytes",
+        nameEn: "Lymphocytes",
+        nameUr: "لمفوسائٹس",
+        value: "",
+        unit: "%",
+        referenceRange: { min: 0, max: 0 },
+        category: "Differential"
+      },
+      {
+        id: "monocytes",
+        nameEn: "Monocytes",
+        nameUr: "مونوسائٹس",
+        value: "",
+        unit: "%",
+        referenceRange: { min: 0, max: 0 },
+        category: "Differential"
+      },
+      {
+        id: "eosinophils",
+        nameEn: "Eosinophils",
+        nameUr: "ایوسینوفلز",
+        value: "",
+        unit: "%",
+        referenceRange: { min: 0, max: 0 },
+        category: "Differential"
+      },
+      {
+        id: "basophils",
+        nameEn: "Basophils",
+        nameUr: "بیسوفلز",
+        value: "",
+        unit: "%",
+        referenceRange: { min: 0, max: 0 },
+        category: "Differential"
       }
     ]
   });
@@ -89,6 +163,26 @@ const CBCForm = ({ language, onSubmit }: CBCFormProps) => {
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.patientGender) {
+      alert(language === 'en' ? 'Patient gender is required' : 'مریض کا جنس درکار ہے');
+      return;
+    }
+    
+    // Check if at least the primary parameters have values
+    const primaryParams = formData.parameters.filter(p => p.category === 'Primary');
+    const filledPrimaryParams = primaryParams.filter(p => p.value !== '');
+    
+    if (filledPrimaryParams.length < 3) {
+      alert(
+        language === 'en' 
+          ? 'Please provide at least 3 primary CBC parameters (WBC, RBC, Hemoglobin, Hematocrit, Platelets)' 
+          : 'براہ کرم کم از کم 3 بنیادی سی بی سی پیرامیٹرز فراہم کریں (WBC، RBC، ہیموگلوبن، ہیماٹوکرٹ، پلیٹلیٹس)'
+      );
+      return;
+    }
+    
     onSubmit(formData);
   };
 
@@ -101,110 +195,203 @@ const CBCForm = ({ language, onSubmit }: CBCFormProps) => {
       )
     }));
   };
+  
+  // Handle extracted data from PDF
+  const handleExtractedData = (extractedData: CBCFormData) => {
+    setFormData(extractedData);
+  };
+  
+  // Group parameters by category for better organization
+  const groupedParameters = {
+    primary: formData.parameters.filter(p => p.category === 'Primary'),
+    secondary: formData.parameters.filter(p => p.category === 'Secondary'),
+    differential: formData.parameters.filter(p => p.category === 'Differential')
+  };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>
-          {language === "en" ? "CBC Report Details" : "سی بی سی رپورٹ کی تفصیلات"}
-        </CardTitle>
-        <CardDescription>
-          {language === "en" 
-            ? "Enter your CBC report parameters for analysis" 
-            : "تجزیہ کے لیے اپنے سی بی سی رپورٹ کے پیرامیٹرز درج کریں"}
-        </CardDescription>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="patientName">
-                {language === "en" ? "Patient Name" : "مریض کا نام"}
-              </Label>
-              <Input
-                id="patientName"
-                value={formData.patientName}
-                onChange={(e) => setFormData({...formData, patientName: e.target.value})}
-                placeholder={language === "en" ? "Enter name" : "نام درج کریں"}
-                className="mt-1"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="patientAge">
-                {language === "en" ? "Patient Age" : "مریض کی عمر"}
-              </Label>
-              <Input
-                id="patientAge"
-                type="number"
-                min="0"
-                value={formData.patientAge || ""}
-                onChange={(e) => setFormData({...formData, patientAge: parseInt(e.target.value) || 0})}
-                placeholder={language === "en" ? "Enter age" : "عمر درج کریں"}
-                className="mt-1"
-              />
-            </div>
-            
-            <div>
-              <Label>
-                {language === "en" ? "Patient Gender" : "مریض کا جنس"}
-              </Label>
-              <RadioGroup
-                value={formData.patientGender}
-                onValueChange={(value) => setFormData({...formData, patientGender: value as 'male' | 'female'})}
-                className="mt-2 flex space-x-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="male" id="male" />
-                  <Label htmlFor="male">{language === "en" ? "Male" : "مرد"}</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="female" id="female" />
-                  <Label htmlFor="female">{language === "en" ? "Female" : "عورت"}</Label>
-                </div>
-              </RadioGroup>
-            </div>
-          </div>
-          
-          <div>
-            <h3 className="text-lg font-medium mb-3">
-              {language === "en" ? "CBC Parameters" : "سی بی سی پیرامیٹرز"}
-            </h3>
-            <div className="space-y-4">
-              {formData.parameters.map((param) => (
-                <div key={param.id} className="grid grid-cols-12 gap-4 items-center">
-                  <Label className="col-span-6" htmlFor={param.id}>
-                    {language === "en" ? param.nameEn : param.nameUr}
-                  </Label>
-                  <div className="col-span-4">
-                    <Input
-                      id={param.id}
-                      type="text"
-                      value={param.value}
-                      onChange={(e) => handleParameterChange(param.id, e.target.value)}
-                      placeholder="0.0"
-                    />
-                  </div>
-                  <div className="col-span-2 text-sm text-gray-500">
-                    {param.unit}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
+    <div className="space-y-6">
+      <Tabs defaultValue="upload" className="w-full">
+        <TabsList className="grid grid-cols-2 w-full">
+          <TabsTrigger value="upload">
+            {language === "en" ? "Upload Report" : "رپورٹ اپلوڈ کریں"}
+          </TabsTrigger>
+          <TabsTrigger value="manual">
+            {language === "en" ? "Manual Entry" : "دستی اندراج"}
+          </TabsTrigger>
+        </TabsList>
         
-        <CardFooter>
-          <Button 
-            type="submit" 
-            className="w-full bg-medical-600 hover:bg-medical-700"
-            disabled={!formData.patientGender}
-          >
-            {language === "en" ? "Analyze Report" : "رپورٹ کا تجزیہ کریں"}
-          </Button>
-        </CardFooter>
-      </form>
-    </Card>
+        <TabsContent value="upload" className="mt-4">
+          <PDFUploader 
+            language={language} 
+            parameters={formData.parameters} 
+            onExtracted={handleExtractedData} 
+          />
+        </TabsContent>
+        
+        <TabsContent value="manual" className="mt-4">
+          {/* Manual form content continues below */}
+        </TabsContent>
+      </Tabs>
+      
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>
+            {language === "en" ? "CBC Report Details" : "سی بی سی رپورٹ کی تفصیلات"}
+          </CardTitle>
+          <CardDescription>
+            {language === "en" 
+              ? "Enter your CBC report parameters for analysis" 
+              : "تجزیہ کے لیے اپنے سی بی سی رپورٹ کے پیرامیٹرز درج کریں"}
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="patientName">
+                  {language === "en" ? "Patient Name" : "مریض کا نام"}
+                </Label>
+                <Input
+                  id="patientName"
+                  value={formData.patientName}
+                  onChange={(e) => setFormData({...formData, patientName: e.target.value})}
+                  placeholder={language === "en" ? "Enter name" : "نام درج کریں"}
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="patientAge">
+                  {language === "en" ? "Patient Age" : "مریض کی عمر"}
+                </Label>
+                <Input
+                  id="patientAge"
+                  type="number"
+                  min="0"
+                  value={formData.patientAge || ""}
+                  onChange={(e) => setFormData({...formData, patientAge: parseInt(e.target.value) || 0})}
+                  placeholder={language === "en" ? "Enter age" : "عمر درج کریں"}
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label>
+                  {language === "en" ? "Patient Gender" : "مریض کا جنس"}
+                </Label>
+                <RadioGroup
+                  value={formData.patientGender}
+                  onValueChange={(value) => setFormData({...formData, patientGender: value as 'male' | 'female'})}
+                  className="mt-2 flex space-x-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="male" id="male" />
+                    <Label htmlFor="male">{language === "en" ? "Male" : "مرد"}</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="female" id="female" />
+                    <Label htmlFor="female">{language === "en" ? "Female" : "عورت"}</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-medium mb-3">
+                {language === "en" ? "Primary CBC Parameters" : "بنیادی سی بی سی پیرامیٹرز"}
+              </h3>
+              <div className="space-y-4">
+                {groupedParameters.primary.map((param) => (
+                  <div key={param.id} className="grid grid-cols-12 gap-4 items-center">
+                    <Label className="col-span-6" htmlFor={param.id}>
+                      {language === "en" ? param.nameEn : param.nameUr}
+                    </Label>
+                    <div className="col-span-4">
+                      <Input
+                        id={param.id}
+                        type="text"
+                        value={param.value}
+                        onChange={(e) => handleParameterChange(param.id, e.target.value)}
+                        placeholder="0.0"
+                      />
+                    </div>
+                    <div className="col-span-2 text-sm text-gray-500">
+                      {param.unit}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Secondary Parameters Section */}
+            <div>
+              <h3 className="text-lg font-medium mb-3">
+                {language === "en" ? "Secondary CBC Parameters" : "ثانوی سی بی سی پیرامیٹرز"}
+              </h3>
+              <div className="space-y-4">
+                {groupedParameters.secondary.map((param) => (
+                  <div key={param.id} className="grid grid-cols-12 gap-4 items-center">
+                    <Label className="col-span-6" htmlFor={param.id}>
+                      {language === "en" ? param.nameEn : param.nameUr}
+                    </Label>
+                    <div className="col-span-4">
+                      <Input
+                        id={param.id}
+                        type="text"
+                        value={param.value}
+                        onChange={(e) => handleParameterChange(param.id, e.target.value)}
+                        placeholder="0.0"
+                      />
+                    </div>
+                    <div className="col-span-2 text-sm text-gray-500">
+                      {param.unit}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Differential Count Section */}
+            <div>
+              <h3 className="text-lg font-medium mb-3">
+                {language === "en" ? "Differential WBC Count" : "ڈفرنشیل ڈبلیو بی سی کاؤنٹ"}
+              </h3>
+              <div className="space-y-4">
+                {groupedParameters.differential.map((param) => (
+                  <div key={param.id} className="grid grid-cols-12 gap-4 items-center">
+                    <Label className="col-span-6" htmlFor={param.id}>
+                      {language === "en" ? param.nameEn : param.nameUr}
+                    </Label>
+                    <div className="col-span-4">
+                      <Input
+                        id={param.id}
+                        type="text"
+                        value={param.value}
+                        onChange={(e) => handleParameterChange(param.id, e.target.value)}
+                        placeholder="0.0"
+                      />
+                    </div>
+                    <div className="col-span-2 text-sm text-gray-500">
+                      {param.unit}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+          
+          <CardFooter>
+            <Button 
+              type="submit" 
+              className="w-full bg-medical-600 hover:bg-medical-700"
+              disabled={!formData.patientGender}
+            >
+              {language === "en" ? "Analyze Report" : "رپورٹ کا تجزیہ کریں"}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
+    </div>
   );
 };
 

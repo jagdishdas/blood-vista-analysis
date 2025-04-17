@@ -42,6 +42,10 @@ export const CBC_REFERENCE_RANGES: Record<string, ReferenceRange> = {
     male: { min: 32.0, max: 36.0 },
     female: { min: 32.0, max: 36.0 }
   },
+  rdw: {
+    male: { min: 11.5, max: 14.5 },
+    female: { min: 11.5, max: 14.5 }
+  },
   platelets: {
     male: { min: 150.0, max: 450.0 },
     female: { min: 150.0, max: 450.0 }
@@ -74,4 +78,47 @@ export const getParameterReferenceRange = (parameterId: string, gender: 'male' |
   }
   
   return CBC_REFERENCE_RANGES[parameterId][gender];
+};
+
+// Adjust reference ranges by age
+export const adjustReferenceRangeByAge = (
+  range: { min: number, max: number }, 
+  parameterId: string, 
+  age: number
+): { min: number, max: number } => {
+  // Clone the original range to avoid modifying the reference
+  const adjustedRange = { ...range };
+  
+  // Apply age-specific adjustments
+  if (age < 18) {
+    // Adjustments for children and adolescents
+    switch (parameterId) {
+      case 'wbc':
+        // Children typically have higher WBC counts
+        adjustedRange.min = 5.0;
+        adjustedRange.max = 15.0;
+        break;
+      case 'hemoglobin':
+        // Adjust hemoglobin for children
+        if (age < 6) {
+          adjustedRange.min -= 1;
+          adjustedRange.max -= 1;
+        }
+        break;
+    }
+  } else if (age > 65) {
+    // Adjustments for elderly
+    switch (parameterId) {
+      case 'hemoglobin':
+        // Slightly lower hemoglobin may be normal in elderly
+        adjustedRange.min -= 0.5;
+        break;
+      case 'lymphocytes':
+        // Lymphocyte percentages may be lower in elderly
+        adjustedRange.min -= 2.0;
+        break;
+    }
+  }
+  
+  return adjustedRange;
 };

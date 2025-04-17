@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -14,6 +15,7 @@ import {
   BarChart,
   Bar,
   Legend,
+  Cell,
 } from "recharts";
 import { 
   CheckCircle, 
@@ -318,8 +320,14 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                     <Bar 
                       dataKey="deviation" 
                       name={language === "en" ? "Deviation" : "انحراف"}
-                      fill={(props) => getStatusColor(props.status)}
-                    />
+                    >
+                      {deviationData
+                        .filter(d => d.status !== 'normal')
+                        .map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={getStatusColor(entry.status)} />
+                        ))
+                      }
+                    </Bar>
                     <Legend />
                     <ReferenceLine y={0} stroke="#000" />
                   </BarChart>

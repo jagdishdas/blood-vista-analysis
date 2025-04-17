@@ -3,8 +3,8 @@ import { createWorker } from 'tesseract.js';
 import { OCRResult, ExtractedCBCData, CBCParameter, CBCFormData } from '@/types/cbc.types';
 import { pdfjs } from 'react-pdf';
 
-// Initialize PDF.js with a direct path to the worker
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Initialize PDF.js with a direct path to the worker with specific version to avoid runtime errors
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 // Create a Tesseract worker for OCR processing
 const createOCRWorker = async () => {
@@ -112,7 +112,63 @@ export const processImageFile = async (file: File): Promise<OCRResult> => {
   }
 };
 
-// Parse the OCR text to extract CBC parameters
+// Normalize different unit formats to a standardized form
+const normalizeUnit = (unit: string): string => {
+  // Handle various unit formats
+  if (/10\^3\/[µu]l|k\/[µu]l|×10\^3\/[µu]l|10³\/[µu]l/i.test(unit)) {
+    return '10³/µL'; // Standardize to 10³/µL
+  }
+  if (/10\^6\/[µu]l|m\/[µu]l|×10\^6\/[µu]l|10⁶\/[µu]l/i.test(unit)) {
+    return '10⁶/µL'; // Standardize to 10⁶/µL
+  }
+  if (/g\/dl|g%/i.test(unit)) {
+    return 'g/dL'; // Standardize to g/dL
+  }
+  if (/fl/i.test(unit)) {
+    return 'fL'; // Standardize to fL
+  }
+  if (/pg/i.test(unit)) {
+    return 'pg'; // Standardize to pg
+  }
+  if (unit === '%') {
+    return '%';
+  }
+  if (/cumm|\/mm3|\/mm³/i.test(unit)) {
+    return '/mm³'; // Standardize units like /mm3 or cumm
+  }
+  if (/mill\/cumm|mill\/mm3|mill\/mm³/i.test(unit)) {
+    return 'mill/mm³'; // For red blood cell count
+  }
+
+  return unit; // Return as is if no match
+};
+
+// Convert value to standard format
+const normalizeValue = (value: string, unit: string): string => {
+  const numericValue = parseFloat(value);
+  
+  // Handle various scientific notations and ensure proper scaling
+  if (/10\^3|k\/|×10\^3|10³/i.test(unit)) {
+    // Already in thousands, return as is
+    return numericValue.toString();
+  }
+  if (/10\^6|m\/|×10\^6|10⁶/i.test(unit)) {
+    // Already in millions, return as is
+    return numericValue.toString();
+  }
+  
+  // Handle raw counts that might be in different formats
+  if (/cumm|\/mm3|\/mm³/i.test(unit) && numericValue > 1000) {
+    // If WBC count is given as absolute (e.g. 9000 instead of 9.0)
+    if (numericValue > 1000 && numericValue < 30000) {
+      return numericValue.toString(); // Keep as absolute count
+    }
+  }
+  
+  return numericValue.toString();
+};
+
+// Parse the OCR text to extract CBC parameters - enhanced to handle different formats
 export const extractCBCData = (ocrText: string): ExtractedCBCData => {
   console.log('Extracted raw text:', ocrText);
   const lines = ocrText.split('\n').map(line => line.trim()).filter(Boolean);
@@ -154,22 +210,89 @@ export const extractCBCData = (ocrText: string): ExtractedCBCData => {
   
   // Define the parameters to extract with their possible names in reports
   const parameterMapping = [
-    { id: 'wbc', patterns: [/\b(?:wbc|white\s*blood\s*cells?|leukocytes?|w\.b\.c)\b/i], valuePatterns: [/\b\d+\.?\d*\s*(?:x\s*10\^\d+\/[µu]l|k\/[µu]l|10\^3\/[µu]l|×\s*10\^3\/[µu]l)/i] },
-    { id: 'rbc', patterns: [/\b(?:rbc|red\s*blood\s*cells?|erythrocytes?|r\.b\.c)\b/i], valuePatterns: [/\b\d+\.?\d*\s*(?:x\s*10\^\d+\/[µu]l|m\/[µu]l|10\^6\/[µu]l|×\s*10\^6\/[µu]l)/i] },
-    { id: 'hemoglobin', patterns: [/\b(?:h[ae]moglobin|hgb|hb)\b/i], valuePatterns: [/\b\d+\.?\d*\s*(?:g\/dl|g%)/i] },
-    { id: 'hematocrit', patterns: [/\b(?:h[ae]matocrit|hct|pcv)\b/i], valuePatterns: [/\b\d+\.?\d*\s*%/i] },
-    { id: 'mcv', patterns: [/\b(?:mcv|mean\s*corpuscular\s*volume)\b/i], valuePatterns: [/\b\d+\.?\d*\s*(?:fl|fL)/i] },
-    { id: 'mch', patterns: [/\b(?:mch)\b/i], valuePatterns: [/\b\d+\.?\d*\s*(?:pg)/i] },
-    { id: 'mchc', patterns: [/\b(?:mchc)\b/i], valuePatterns: [/\b\d+\.?\d*\s*(?:g\/dl|%)/i] },
-    { id: 'platelets', patterns: [/\b(?:platelets|plt|thrombocytes)\b/i], valuePatterns: [/\b\d+\.?\d*\s*(?:x\s*10\^\d+\/[µu]l|k\/[µu]l|10\^3\/[µu]l|×\s*10\^3\/[µu]l)/i] },
-    { id: 'neutrophils', patterns: [/\b(?:neutrophils|neut|neutro)\b/i], valuePatterns: [/\b\d+\.?\d*\s*%/i, /\b\d+\.?\d*\s*(?:x\s*10\^\d+\/[µu]l|k\/[µu]l)/i] },
-    { id: 'lymphocytes', patterns: [/\b(?:lymphocytes|lymph)\b/i], valuePatterns: [/\b\d+\.?\d*\s*%/i, /\b\d+\.?\d*\s*(?:x\s*10\^\d+\/[µu]l|k\/[µu]l)/i] },
-    { id: 'monocytes', patterns: [/\b(?:monocytes|mono)\b/i], valuePatterns: [/\b\d+\.?\d*\s*%/i, /\b\d+\.?\d*\s*(?:x\s*10\^\d+\/[µu]l|k\/[µu]l)/i] },
-    { id: 'eosinophils', patterns: [/\b(?:eosinophils|eos)\b/i], valuePatterns: [/\b\d+\.?\d*\s*%/i, /\b\d+\.?\d*\s*(?:x\s*10\^\d+\/[µu]l|k\/[µu]l)/i] },
-    { id: 'basophils', patterns: [/\b(?:basophils|baso)\b/i], valuePatterns: [/\b\d+\.?\d*\s*%/i, /\b\d+\.?\d*\s*(?:x\s*10\^\d+\/[µu]l|k\/[µu]l)/i] }
+    { 
+      id: 'wbc', 
+      patterns: [/\b(?:wbc|white\s*blood\s*cells?|leukocytes?|w\.b\.c|total\s*wbc\s*count)\b/i], 
+      valuePatterns: [
+        /\b\d+\.?\d*\s*(?:x\s*10\^3\/[µu]l|k\/[µu]l|10\^3\/[µu]l|×\s*10\^3\/[µu]l)/i,
+        /\b\d+\.?\d*\s*(?:cumm|\/mm3|\/mm³)/i
+      ]
+    },
+    { 
+      id: 'rbc', 
+      patterns: [/\b(?:rbc|red\s*blood\s*cells?|erythrocytes?|r\.b\.c|total\s*rbc\s*count)\b/i], 
+      valuePatterns: [
+        /\b\d+\.?\d*\s*(?:x\s*10\^6\/[µu]l|m\/[µu]l|10\^6\/[µu]l|×\s*10\^6\/[µu]l)/i,
+        /\b\d+\.?\d*\s*(?:mill\/cumm|mill\/mm3|mill\/mm³)/i
+      ]
+    },
+    { 
+      id: 'hemoglobin', 
+      patterns: [/\b(?:h[ae]moglobin|hgb|hb)\b/i], 
+      valuePatterns: [/\b\d+\.?\d*\s*(?:g\/dl|g%)/i] 
+    },
+    { 
+      id: 'hematocrit', 
+      patterns: [/\b(?:h[ae]matocrit|hct|pcv|packed\s*cell\s*volume)\b/i], 
+      valuePatterns: [/\b\d+\.?\d*\s*%/i] 
+    },
+    { 
+      id: 'mcv', 
+      patterns: [/\b(?:mcv|mean\s*corpuscular\s*volume)\b/i], 
+      valuePatterns: [/\b\d+\.?\d*\s*(?:fl|fL)/i] 
+    },
+    { 
+      id: 'mch', 
+      patterns: [/\b(?:mch|mean\s*corpuscular\s*h[ae]moglobin)\b/i], 
+      valuePatterns: [/\b\d+\.?\d*\s*(?:pg)/i] 
+    },
+    { 
+      id: 'mchc', 
+      patterns: [/\b(?:mchc|mean\s*corpuscular\s*h[ae]moglobin\s*concentration)\b/i], 
+      valuePatterns: [/\b\d+\.?\d*\s*(?:g\/dl|%)/i] 
+    },
+    { 
+      id: 'platelets', 
+      patterns: [/\b(?:platelets|plt|thrombocytes|platelet\s*count)\b/i], 
+      valuePatterns: [
+        /\b\d+\.?\d*\s*(?:x\s*10\^3\/[µu]l|k\/[µu]l|10\^3\/[µu]l|×\s*10\^3\/[µu]l)/i,
+        /\b\d+\.?\d*\s*(?:cumm|\/mm3|\/mm³)/i,
+        /\b\d+\.?\d*\s*(?:10\^3)/i
+      ]
+    },
+    { 
+      id: 'neutrophils', 
+      patterns: [/\b(?:neutrophils|neut|neutro)\b/i], 
+      valuePatterns: [/\b\d+\.?\d*\s*%/i, /\b\d+\.?\d*\s*(?:x\s*10\^3\/[µu]l|k\/[µu]l)/i] 
+    },
+    { 
+      id: 'lymphocytes', 
+      patterns: [/\b(?:lymphocytes|lymph)\b/i], 
+      valuePatterns: [/\b\d+\.?\d*\s*%/i, /\b\d+\.?\d*\s*(?:x\s*10\^3\/[µu]l|k\/[µu]l)/i] 
+    },
+    { 
+      id: 'monocytes', 
+      patterns: [/\b(?:monocytes|mono)\b/i], 
+      valuePatterns: [/\b\d+\.?\d*\s*%/i, /\b\d+\.?\d*\s*(?:x\s*10\^3\/[µu]l|k\/[µu]l)/i] 
+    },
+    { 
+      id: 'eosinophils', 
+      patterns: [/\b(?:eosinophils|eos)\b/i], 
+      valuePatterns: [/\b\d+\.?\d*\s*%/i, /\b\d+\.?\d*\s*(?:x\s*10\^3\/[µu]l|k\/[µu]l)/i] 
+    },
+    { 
+      id: 'basophils', 
+      patterns: [/\b(?:basophils|baso)\b/i], 
+      valuePatterns: [/\b\d+\.?\d*\s*%/i, /\b\d+\.?\d*\s*(?:x\s*10\^3\/[µu]l|k\/[µu]l)/i] 
+    },
+    {
+      id: 'rdw',
+      patterns: [/\b(?:rdw|red\s*cell\s*distribution\s*width)\b/i],
+      valuePatterns: [/\b\d+\.?\d*\s*%/i]
+    }
   ];
   
-  // Extract parameters from the OCR text
+  // Extract parameters from the OCR text with improved pattern matching
   for (const { id, patterns, valuePatterns } of parameterMapping) {
     // First find a line that contains the parameter name
     let parameterLine = '';
@@ -206,11 +329,15 @@ export const extractCBCData = (ocrText: string): ExtractedCBCData => {
             // Extract just the numeric part
             const numericMatch = valueMatch[0].match(/\d+\.?\d*/);
             if (numericMatch) {
-              const value = numericMatch[0];
+              const rawValue = numericMatch[0];
               
               // Try to extract unit
-              const unitMatch = valueMatch[0].match(/[a-zA-Z%\/]+\/[a-zA-Z]+|[gµfp][\/]?[dLml]|10\^\d+\/[µu][lL]|[×x]\s*10\^[36]\/[µu][lL]|[kKmM]\/[µu][lL]|%/);
-              const unit = unitMatch ? unitMatch[0] : '';
+              const unitMatch = valueMatch[0].match(/[a-zA-Z%\/]+\/[a-zA-Z]+|[gµfp][\/]?[dLml]|10\^\d+\/[µu][lL]|[×x]\s*10\^[36]\/[µu][lL]|[kKmM]\/[µu][lL]|%|cumm|\/mm3|\/mm³|mill\/cumm|mill\/mm3|mill\/mm³/);
+              const rawUnit = unitMatch ? unitMatch[0] : '';
+              
+              // Normalize value and unit
+              const unit = normalizeUnit(rawUnit);
+              const value = normalizeValue(rawValue, rawUnit);
               
               // Look for reference range nearby
               const rangeMatch = line.match(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/) || 
@@ -243,14 +370,16 @@ export const extractCBCData = (ocrText: string): ExtractedCBCData => {
       // If parameter-specific patterns didn't work, try generic number extraction
       if (!found) {
         for (const line of linesToCheck) {
-          // Look for a number following the parameter name or on the same line
-          const valueMatch = line.match(/\b(\d+\.?\d*)\b/);
-          if (valueMatch) {
-            const value = valueMatch[1];
+          // Look for numbers in the line - more robust extraction
+          const valueMatches = line.match(/\b(\d+\.?\d*)\b/g);
+          if (valueMatches && valueMatches.length > 0) {
+            // Use the first number found if multiple are present
+            const value = valueMatches[0];
             
-            // Try to extract unit
-            const unitMatch = line.match(/[a-zA-Z%\/]+\/[a-zA-Z]+|[gµfp][\/]?[dLml]|10\^\d+\/[µu][lL]|[×x]\s*10\^[36]\/[µu][lL]|[kKmM]\/[µu][lL]|%/);
-            const unit = unitMatch ? unitMatch[0] : '';
+            // Try to detect unit based on common patterns in lab reports
+            const unitMatches = line.match(/[a-zA-Z%\/]+\/[a-zA-Z]+|[gµfp][\/]?[dLml]|10\^\d+\/[µu][lL]|[×x]\s*10\^[36]\/[µu][lL]|[kKmM]\/[µu][lL]|%|cumm|\/mm3|\/mm³|mill\/cumm|mill\/mm3|mill\/mm³/);
+            const rawUnit = unitMatches ? unitMatches[0] : '';
+            const unit = normalizeUnit(rawUnit);
             
             // Try to extract reference range from this line or nearby lines
             const rangeMatch = line.match(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/) || 

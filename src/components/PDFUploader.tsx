@@ -2,11 +2,12 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Upload, FileCheck, Loader2, FileImage } from 'lucide-react';
+import { Upload, FileCheck, Loader2, FileImage, AlertCircle } from 'lucide-react';
 import { processPDF, processImageFile, extractCBCData, convertToCBCFormData } from '@/utils/pdf-processor';
 import { CBCParameter, CBCFormData } from '@/types/cbc.types';
 import { toast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PDFUploaderProps {
   language: string;
@@ -19,10 +20,12 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
   const [file, setFile] = useState<File | null>(null);
   const [fileType, setFileType] = useState<'pdf' | 'image'>('pdf');
   const [activeTab, setActiveTab] = useState<string>('pdf');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'pdf' | 'image') => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
+      setErrorMessage(null);
       
       // Check if the file is of the correct type
       if (type === 'pdf' && !selectedFile.type.includes('pdf')) {
@@ -54,6 +57,8 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
     if (!file) return;
     
     setIsProcessing(true);
+    setErrorMessage(null);
+    
     try {
       let ocrResult;
       
@@ -77,6 +82,10 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
       const extractedData = extractCBCData(ocrResult.text);
       
       if (extractedData.parameters.length === 0) {
+        setErrorMessage(language === 'en'
+          ? 'Could not extract CBC parameters from the file. Please try uploading a clearer scan or enter values manually.'
+          : 'فائل سے سی بی سی پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔');
+        
         toast({
           title: language === 'en' ? 'No Data Found' : 'کوئی ڈیٹا نہیں ملا',
           description: language === 'en'
@@ -100,6 +109,10 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
       
     } catch (error) {
       console.error('Error processing file:', error);
+      setErrorMessage(language === 'en'
+        ? 'Failed to process the file. Please try again or enter values manually.'
+        : 'فائل کو پروسیس کرنے میں ناکام۔ براہ کرم دوبارہ کوشش کریں یا قدریں دستی طور پر درج کریں۔');
+      
       toast({
         title: language === 'en' ? 'Processing Error' : 'پروسیسنگ میں خرابی',
         description: language === 'en'
@@ -207,6 +220,15 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
             </div>
           </TabsContent>
         </Tabs>
+
+        {errorMessage && (
+          <Alert variant="destructive" className="mt-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {errorMessage}
+            </AlertDescription>
+          </Alert>
+        )}
         
         <Button 
           onClick={handleProcess} 

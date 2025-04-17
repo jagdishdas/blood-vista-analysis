@@ -3,8 +3,8 @@ import { createWorker } from 'tesseract.js';
 import { OCRResult, ExtractedCBCData, CBCParameter, CBCFormData } from '@/types/cbc.types';
 import { pdfjs } from 'react-pdf';
 
-// Initialize PDF.js
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Initialize PDF.js with a direct path to the worker
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 // Create a Tesseract worker for OCR processing
 const createOCRWorker = async () => {
@@ -15,35 +15,60 @@ const createOCRWorker = async () => {
   return worker;
 };
 
+// Process any image data (from PDF or direct image upload)
+export const processImage = async (imageDataUrl: string): Promise<OCRResult> => {
+  try {
+    // Use Tesseract.js to perform OCR on the image
+    const worker = await createOCRWorker();
+    console.log('Starting OCR processing on image...');
+    const result = await worker.recognize(imageDataUrl);
+    console.log('OCR processing complete, confidence:', result.data.confidence);
+    await worker.terminate();
+    
+    return {
+      text: result.data.text,
+      confidence: result.data.confidence,
+    };
+  } catch (error) {
+    console.error('Error processing image:', error);
+    throw new Error('Failed to process the image');
+  }
+};
+
 // Convert a PDF page to an image using PDF.js
 const convertPdfPageToImage = async (pdfData: ArrayBuffer): Promise<string> => {
-  // Load the PDF document
-  const loadingTask = pdfjs.getDocument({ data: pdfData });
-  const pdf = await loadingTask.promise;
-  
-  // Get the first page
-  const page = await pdf.getPage(1);
-  
-  // Create a canvas to render the page
-  const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better quality
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  
-  if (!context) {
-    throw new Error('Could not create canvas context');
+  try {
+    // Load the PDF document
+    const loadingTask = pdfjs.getDocument({ data: pdfData });
+    const pdf = await loadingTask.promise;
+    
+    // Get the first page
+    const page = await pdf.getPage(1);
+    
+    // Create a canvas to render the page
+    const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better quality
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    if (!context) {
+      throw new Error('Could not create canvas context');
+    }
+    
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+    
+    // Render the page on the canvas
+    await page.render({
+      canvasContext: context,
+      viewport: viewport
+    }).promise;
+    
+    // Convert the canvas to an image data URL
+    return canvas.toDataURL('image/png');
+  } catch (error) {
+    console.error('Error converting PDF to image:', error);
+    throw new Error('Failed to convert PDF to image');
   }
-  
-  canvas.height = viewport.height;
-  canvas.width = viewport.width;
-  
-  // Render the page on the canvas
-  await page.render({
-    canvasContext: context,
-    viewport: viewport
-  }).promise;
-  
-  // Convert the canvas to an image data URL
-  return canvas.toDataURL('image/png');
 };
 
 // Process the uploaded PDF file and extract text via OCR
@@ -60,20 +85,30 @@ export const processPDF = async (file: File): Promise<OCRResult> => {
     // Convert the PDF's first page to an image
     const imageDataUrl = await convertPdfPageToImage(arrayBuffer);
     
-    // Use Tesseract.js to perform OCR on the image
-    const worker = await createOCRWorker();
-    console.log('Starting OCR processing...');
-    const result = await worker.recognize(imageDataUrl);
-    console.log('OCR processing complete, confidence:', result.data.confidence);
-    await worker.terminate();
-    
-    return {
-      text: result.data.text,
-      confidence: result.data.confidence,
-    };
+    // Process the image with OCR
+    return await processImage(imageDataUrl);
   } catch (error) {
     console.error('Error processing PDF:', error);
     throw new Error('Failed to process the PDF file');
+  }
+};
+
+// Process an uploaded image file and extract text via OCR
+export const processImageFile = async (file: File): Promise<OCRResult> => {
+  try {
+    // Read the file as data URL
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    
+    // Process the image with OCR
+    return await processImage(dataUrl);
+  } catch (error) {
+    console.error('Error processing image file:', error);
+    throw new Error('Failed to process the image file');
   }
 };
 

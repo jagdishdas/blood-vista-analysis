@@ -37,8 +37,8 @@ const Index = () => {
             </h1>
             <p className="text-gray-600">
               {language === "en" 
-                ? "Upload your CBC report PDF or enter parameters manually for professional analysis and interpretation"
-                : "پیشہ ورانہ تجزیہ اور تشریح کے لیے اپنی سی بی سی رپورٹ پی ڈی ایف اپلوڈ کریں یا پیرامیٹرز کو دستی طور پر درج کریں"
+                ? "Upload your CBC report PDF or image, or enter parameters manually for professional analysis and interpretation"
+                : "پیشہ ورانہ تجزیہ اور تشریح کے لیے اپنی سی بی سی رپورٹ پی ڈی ایف یا تصویر اپلوڈ کریں یا پیرامیٹرز کو دستی طور پر درج کریں"
               }
             </p>
           </div>

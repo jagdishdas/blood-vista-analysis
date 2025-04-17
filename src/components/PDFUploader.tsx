@@ -2,10 +2,11 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Upload, FileCheck, Loader2 } from 'lucide-react';
-import { processPDF, extractCBCData, convertToCBCFormData } from '@/utils/pdf-processor';
+import { Upload, FileCheck, Loader2, FileImage } from 'lucide-react';
+import { processPDF, processImageFile, extractCBCData, convertToCBCFormData } from '@/utils/pdf-processor';
 import { CBCParameter, CBCFormData } from '@/types/cbc.types';
 import { toast } from "@/components/ui/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface PDFUploaderProps {
   language: string;
@@ -16,13 +17,15 @@ interface PDFUploaderProps {
 const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [fileType, setFileType] = useState<'pdf' | 'image'>('pdf');
+  const [activeTab, setActiveTab] = useState<string>('pdf');
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'pdf' | 'image') => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       
-      // Check if the file is a PDF
-      if (!selectedFile.type.includes('pdf')) {
+      // Check if the file is of the correct type
+      if (type === 'pdf' && !selectedFile.type.includes('pdf')) {
         toast({
           title: language === 'en' ? 'Invalid File Type' : 'غلط فائل کی قسم',
           description: language === 'en' 
@@ -31,9 +34,19 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
           variant: 'destructive'
         });
         return;
+      } else if (type === 'image' && !selectedFile.type.includes('image')) {
+        toast({
+          title: language === 'en' ? 'Invalid File Type' : 'غلط فائل کی قسم',
+          description: language === 'en' 
+            ? 'Please upload an image file (JPG, PNG, etc.)' 
+            : 'براہ کرم تصویر فائل اپلوڈ کریں (JPG، PNG، وغیرہ)',
+          variant: 'destructive'
+        });
+        return;
       }
       
       setFile(selectedFile);
+      setFileType(type);
     }
   };
 
@@ -42,7 +55,14 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
     
     setIsProcessing(true);
     try {
-      const ocrResult = await processPDF(file);
+      let ocrResult;
+      
+      // Process based on file type
+      if (fileType === 'pdf') {
+        ocrResult = await processPDF(file);
+      } else {
+        ocrResult = await processImageFile(file);
+      }
       
       if (ocrResult.confidence < 60) {
         toast({
@@ -60,8 +80,8 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
         toast({
           title: language === 'en' ? 'No Data Found' : 'کوئی ڈیٹا نہیں ملا',
           description: language === 'en'
-            ? 'Could not extract CBC parameters from the PDF. Please try uploading a clearer scan or enter values manually.'
-            : 'پی ڈی ایف سے سی بی سی پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔',
+            ? 'Could not extract CBC parameters from the file. Please try uploading a clearer scan or enter values manually.'
+            : 'فائل سے سی بی سی پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔',
           variant: 'destructive'
         });
         return;
@@ -79,12 +99,12 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
       });
       
     } catch (error) {
-      console.error('Error processing PDF:', error);
+      console.error('Error processing file:', error);
       toast({
         title: language === 'en' ? 'Processing Error' : 'پروسیسنگ میں خرابی',
         description: language === 'en'
-          ? 'Failed to process the PDF. Please try again or enter values manually.'
-          : 'پی ڈی ایف کو پروسیس کرنے میں ناکام۔ براہ کرم دوبارہ کوشش کریں یا قدریں دستی طور پر درج کریں۔',
+          ? 'Failed to process the file. Please try again or enter values manually.'
+          : 'فائل کو پروسیس کرنے میں ناکام۔ براہ کرم دوبارہ کوشش کریں یا قدریں دستی طور پر درج کریں۔',
         variant: 'destructive'
       });
     } finally {
@@ -96,48 +116,97 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
     <Card className="w-full">
       <CardHeader>
         <CardTitle>
-          {language === 'en' ? 'Upload CBC Report PDF' : 'سی بی سی رپورٹ پی ڈی ایف اپلوڈ کریں'}
+          {language === 'en' ? 'Upload CBC Report' : 'سی بی سی رپورٹ اپلوڈ کریں'}
         </CardTitle>
         <CardDescription>
           {language === 'en' 
-            ? 'Upload your CBC report in PDF format for automatic extraction' 
-            : 'خودکار استخراج کے لیے اپنی سی بی سی رپورٹ پی ڈی ایف فارمیٹ میں اپلوڈ کریں'}
+            ? 'Upload your CBC report as PDF or image for automatic extraction' 
+            : 'خودکار استخراج کے لیے اپنی سی بی سی رپورٹ پی ڈی ایف یا تصویر کے طور پر اپلوڈ کریں'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-center w-full">
-          <label htmlFor="pdf-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
-            <div className="flex flex-col items-center justify-center px-4 py-6 text-center">
-              {!file ? (
-                <>
-                  <Upload className="h-10 w-10 text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-500">
-                    {language === 'en' 
-                      ? 'Click to upload or drag and drop' 
-                      : 'اپلوڈ کرنے کے لیے کلک کریں یا کھینچ کر چھوڑیں'}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">PDF (MAX. 10MB)</p>
-                </>
-              ) : (
-                <>
-                  <FileCheck className="h-10 w-10 text-green-500 mb-2" />
-                  <p className="text-sm text-gray-700 font-medium">{file.name}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {(file.size / (1024 * 1024)).toFixed(2)} MB
-                  </p>
-                </>
-              )}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="pdf">
+              {language === 'en' ? 'PDF Upload' : 'پی ڈی ایف اپلوڈ'}
+            </TabsTrigger>
+            <TabsTrigger value="image">
+              {language === 'en' ? 'Image Upload' : 'تصویر اپلوڈ'}
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="pdf" className="mt-4">
+            <div className="flex flex-col items-center justify-center w-full">
+              <label htmlFor="pdf-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                <div className="flex flex-col items-center justify-center px-4 py-6 text-center">
+                  {!file || fileType !== 'pdf' ? (
+                    <>
+                      <Upload className="h-10 w-10 text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-500">
+                        {language === 'en' 
+                          ? 'Click to upload or drag and drop' 
+                          : 'اپلوڈ کرنے کے لیے کلک کریں یا کھینچ کر چھوڑیں'}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">PDF (MAX. 10MB)</p>
+                    </>
+                  ) : (
+                    <>
+                      <FileCheck className="h-10 w-10 text-green-500 mb-2" />
+                      <p className="text-sm text-gray-700 font-medium">{file.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {(file.size / (1024 * 1024)).toFixed(2)} MB
+                      </p>
+                    </>
+                  )}
+                </div>
+                <input 
+                  id="pdf-upload" 
+                  type="file" 
+                  accept=".pdf" 
+                  className="hidden" 
+                  onChange={(e) => handleFileChange(e, 'pdf')} 
+                  disabled={isProcessing}
+                />
+              </label>
             </div>
-            <input 
-              id="pdf-upload" 
-              type="file" 
-              accept=".pdf" 
-              className="hidden" 
-              onChange={handleFileChange} 
-              disabled={isProcessing}
-            />
-          </label>
-        </div>
+          </TabsContent>
+          
+          <TabsContent value="image" className="mt-4">
+            <div className="flex flex-col items-center justify-center w-full">
+              <label htmlFor="image-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                <div className="flex flex-col items-center justify-center px-4 py-6 text-center">
+                  {!file || fileType !== 'image' ? (
+                    <>
+                      <FileImage className="h-10 w-10 text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-500">
+                        {language === 'en' 
+                          ? 'Upload CBC report image' 
+                          : 'سی بی سی رپورٹ کی تصویر اپلوڈ کریں'}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">JPG, PNG (MAX. 10MB)</p>
+                    </>
+                  ) : (
+                    <>
+                      <FileCheck className="h-10 w-10 text-green-500 mb-2" />
+                      <p className="text-sm text-gray-700 font-medium">{file.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {(file.size / (1024 * 1024)).toFixed(2)} MB
+                      </p>
+                    </>
+                  )}
+                </div>
+                <input 
+                  id="image-upload" 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={(e) => handleFileChange(e, 'image')} 
+                  disabled={isProcessing}
+                />
+              </label>
+            </div>
+          </TabsContent>
+        </Tabs>
         
         <Button 
           onClick={handleProcess} 

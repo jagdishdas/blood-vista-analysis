@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Upload, FileCheck, AlertOctagon, Loader2 } from 'lucide-react';
+import { Upload, FileCheck, Loader2 } from 'lucide-react';
 import { processPDF, extractCBCData, convertToCBCFormData } from '@/utils/pdf-processor';
 import { CBCParameter, CBCFormData } from '@/types/cbc.types';
 import { toast } from "@/components/ui/use-toast";
@@ -75,6 +75,7 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
         description: language === 'en'
           ? `Extracted ${extractedData.parameters.length} parameters. Please verify the values before analysis.`
           : `${extractedData.parameters.length} پیرامیٹرز نکالے گئے۔ براہ کرم تجزیہ سے پہلے قدروں کی تصدیق کریں۔`,
+        variant: 'default'
       });
       
     } catch (error) {
@@ -92,7 +93,7 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
   };
 
   return (
-    <Card className="w-full mb-6">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle>
           {language === 'en' ? 'Upload CBC Report PDF' : 'سی بی سی رپورٹ پی ڈی ایف اپلوڈ کریں'}

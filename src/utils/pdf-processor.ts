@@ -148,7 +148,7 @@ export const convertToCBCFormData = (
     patientName: extractedData.patientName || '',
     patientAge: extractedData.patientAge || 0,
     patientGender: extractedData.patientGender || '',
-    parameters: [...existingParameters] // Clone the existing parameters
+    parameters: JSON.parse(JSON.stringify(existingParameters)) // Deep clone the existing parameters
   };
   
   // Update parameters with extracted values

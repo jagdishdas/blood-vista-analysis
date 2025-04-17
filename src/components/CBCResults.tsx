@@ -149,15 +149,14 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Summary Alert */}
+          {/* Summary Alert - Always show both languages */}
           <Alert className={`${abnormalResults.length > 0 ? "bg-amber-50 border-amber-200" : "bg-green-50 border-green-200"}`}>
             <AlertTitle className="font-semibold">
-              {language === "en" ? "Summary" : "خلاصہ"}
+              {language === "en" ? "Summary / خلاصہ" : "خلاصہ / Summary"}
             </AlertTitle>
-            <AlertDescription className={language === "ur" ? "font-urdu text-right" : ""}>
-              {language === "en" 
-                ? analysis.summary.en
-                : analysis.summary.ur}
+            <AlertDescription className="space-y-2">
+              <p>{analysis.summary.en}</p>
+              <p className="font-urdu text-right">{analysis.summary.ur}</p>
             </AlertDescription>
           </Alert>
 
@@ -232,7 +231,7 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                   />
                   <YAxis />
                   <Tooltip 
-                    formatter={(value, name, props) => {
+                    formatter={(value: any, name, props) => {
                       const item = props.payload;
                       return [
                         `${value} ${item.min && item.max ? `(Range: ${item.min}-${item.max})` : ''}`,
@@ -317,16 +316,12 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                         ];
                       }}
                     />
-                    <Bar 
-                      dataKey="deviation" 
-                      name={language === "en" ? "Deviation" : "انحراف"}
-                    >
+                    <Bar dataKey="deviation" name={language === "en" ? "Deviation" : "انحراف"}>
                       {deviationData
                         .filter(d => d.status !== 'normal')
                         .map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={getStatusColor(entry.status)} />
-                        ))
-                      }
+                        ))}
                     </Bar>
                     <Legend />
                     <ReferenceLine y={0} stroke="#000" />
@@ -402,10 +397,10 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
             </div>
           </div>
 
-          {/* Detailed Results */}
+          {/* Detailed Results - Show both languages */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">
-              {language === "en" ? "Detailed Parameter Analysis" : "پیرامیٹر کا تفصیلی تجزیہ"}
+              {language === "en" ? "Detailed Analysis" : "تفصیلی تجزیہ"}
             </h3>
             
             {/* Primary Parameters */}
@@ -464,9 +459,11 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                         )}
                       </div>
                     </div>
-                    <p className={`mt-2 text-sm ${language === "ur" ? "font-urdu text-right" : ""}`}>
-                      {language === "en" ? result.interpretation.en : result.interpretation.ur}
-                    </p>
+                    {/* Show both languages for interpretation */}
+                    <div className="mt-2 space-y-2 text-sm">
+                      <p>{result.interpretation.en}</p>
+                      <p className="font-urdu text-right">{result.interpretation.ur}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -528,9 +525,11 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                         )}
                       </div>
                     </div>
-                    <p className={`mt-2 text-sm ${language === "ur" ? "font-urdu text-right" : ""}`}>
-                      {language === "en" ? result.interpretation.en : result.interpretation.ur}
-                    </p>
+                    {/* Show both languages for interpretation */}
+                    <div className="mt-2 space-y-2 text-sm">
+                      <p>{result.interpretation.en}</p>
+                      <p className="font-urdu text-right">{result.interpretation.ur}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -592,24 +591,25 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                         )}
                       </div>
                     </div>
-                    <p className={`mt-2 text-sm ${language === "ur" ? "font-urdu text-right" : ""}`}>
-                      {language === "en" ? result.interpretation.en : result.interpretation.ur}
-                    </p>
+                    {/* Show both languages for interpretation */}
+                    <div className="mt-2 space-y-2 text-sm">
+                      <p>{result.interpretation.en}</p>
+                      <p className="font-urdu text-right">{result.interpretation.ur}</p>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
           
-          {/* Disclaimer */}
+          {/* Disclaimer - Show both languages */}
           <Alert className="bg-gray-50 border-gray-200">
             <AlertTitle className="font-semibold">
-              {language === "en" ? "Medical Disclaimer" : "طبی انتباہ"}
+              {language === "en" ? "Medical Disclaimer / طبی انتباہ" : "طبی انتباہ / Medical Disclaimer"}
             </AlertTitle>
-            <AlertDescription className={language === "ur" ? "font-urdu text-right" : ""}>
-              {language === "en" 
-                ? "This analysis is for informational purposes only and does not constitute medical advice. Please consult with a qualified healthcare professional for proper diagnosis and treatment."
-                : "یہ تجزیہ صرف معلوماتی مقاصد کے لیے ہے اور یہ طبی مشورہ نہیں ہے۔ مناسب تشخیص اور علاج کے لیے براہ کرم کسی قابل صحت کی دیکھ بھال کرنے والے پیشہ ور سے مشورہ کریں۔"}
+            <AlertDescription className="space-y-2">
+              <p>This analysis is for informational purposes only and does not constitute medical advice. Please consult with a healthcare provider for proper diagnosis and treatment.</p>
+              <p className="font-urdu text-right">یہ تجزیہ صرف معلوماتی مقاصد کے لیے ہے اور یہ طبی مشورہ نہیں ہے۔ مناسب تشخیص اور علاج کے لیے براہ کرم کسی ہیلتھ کیئر فراہم کنندہ سے مشورہ کریں۔</p>
             </AlertDescription>
           </Alert>
         </CardContent>

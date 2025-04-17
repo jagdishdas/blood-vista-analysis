@@ -18,165 +18,165 @@ const getStatus = (value: number, min: number, max: number): 'normal' | 'low' | 
   return 'normal';
 };
 
-// Generate interpretation for each parameter
+// Generate interpretation for each parameter - simplify for common understanding
 const generateInterpretation = (parameter: string, status: 'normal' | 'low' | 'high', deviation: number): { en: string; ur: string } => {
-  // Comprehensive interpretations with medical context
+  // Simplified interpretations with everyday language
   
   const interpretations: Record<string, { en: { normal: string; low: string; high: string }; ur: { normal: string; low: string; high: string } }> = {
     wbc: {
       en: {
-        normal: "White blood cell count is normal, indicating a healthy immune response.",
-        low: "Low white blood cell count (Leukopenia) may indicate bone marrow problems, autoimmune disorders, certain infections, or medication side effects. This can increase your risk of infections.",
-        high: "High white blood cell count (Leukocytosis) suggests your body is fighting an infection or inflammation. It can also indicate a bone marrow disorder, an immune system disorder, or a reaction to medication."
+        normal: "Your white blood cell count is normal, which means your immune system is working properly.",
+        low: "Your white blood cell count is low. This might make it harder for your body to fight infections. Common causes include certain medications or infections.",
+        high: "Your white blood cell count is high, which usually means your body is fighting an infection or inflammation."
       },
       ur: {
-        normal: "سفید خون کے خلیات کی تعداد معمول کے مطابق ہے، جو ایک صحت مند مدافعتی ردعمل کی نشاندہی کرتی ہے۔",
-        low: "سفید خون کے خلیات کی کم تعداد (لیوکوپینیا) بون میرو کے مسائل، آٹو امیون عوارض، کچھ انفیکشنز، یا دوائی کے سائڈ ایفیکٹس کی نشاندہی کر سکتی ہے۔ یہ انفیکشن کے خطرے کو بڑھا سکتی ہے۔",
-        high: "سفید خون کے خلیات کی زیادہ تعداد (لیکوسائٹوسس) بتاتی ہے کہ آپ کا جسم انفیکشن یا سوزش سے لڑ رہا ہے۔ یہ بون میرو کی خرابی، مدافعتی نظام کی خرابی، یا دوائیوں کے ردعمل کی بھی نشاندہی کر سکتی ہے۔"
+        normal: "آپ کے سفید خون کے خلیات کی تعداد معمول کے مطابق ہے، جس کا مطلب ہے کہ آپ کا مدافعتی نظام صحیح طریقے سے کام کر رہا ہے۔",
+        low: "آپ کے سفید خون کے خلیات کی تعداد کم ہے۔ اس سے آپ کے جسم کو انفیکشن سے لڑنا مشکل ہو سکتا ہے۔ عام وجوہات میں کچھ ادویات یا انفیکشن شامل ہیں۔",
+        high: "آپ کے سفید خون کے خلیات کی تعداد زیادہ ہے، جس کا عام طور پر مطلب ہے کہ آپ کا جسم کسی انفیکشن یا سوزش سے لڑ رہا ہے۔"
       }
     },
     rbc: {
       en: {
-        normal: "Red blood cell count is within normal range, indicating good oxygen-carrying capacity.",
-        low: "Low red blood cell count may indicate anemia, blood loss, nutritional deficiencies (iron, folate, or B12), or bone marrow disorders.",
-        high: "High red blood cell count (Erythrocytosis) could indicate dehydration, lung disease, kidney disease, or polycythemia vera. It may increase risk of blood clots."
+        normal: "Your red blood cell count is normal, which means your body is getting enough oxygen.",
+        low: "Your red blood cell count is low. This might make you feel tired or short of breath. Common causes include iron deficiency or blood loss.",
+        high: "Your red blood cell count is high. This could be due to dehydration or a condition that causes your body to make too many red blood cells."
       },
       ur: {
-        normal: "سرخ خون کے خلیات کی تعداد معمول کی حد میں ہے، جو آکسیجن لے جانے کی اچھی صلاحیت کی نشاندہی کرتی ہے۔",
-        low: "سرخ خون کے خلیات کی کم تعداد خون کی کمی، خون کے ضیاع، غذائی کمی (آئرن، فولیٹ، یا بی12)، یا بون میرو کی خرابی کی نشاندہی کر سکتی ہے۔",
-        high: "سرخ خون کے خلیات کی زیادہ تعداد (ایریتھروسائٹوسس) پانی کی کمی، پھیپھڑوں کی بیماری، گردے کی بیماری، یا پولی سائتھیمیا ویرا کو ظاہر کر سکتی ہے۔ یہ خون کے لوتھڑے بننے کے خطرے کو بڑھا سکتی ہے۔"
+        normal: "آپ کے سرخ خون کے خلیات کی تعداد معمول کے مطابق ہے، جس کا مطلب ہے کہ آپ کے جسم کو کافی آکسیجن مل رہی ہے۔",
+        low: "آپ کے سرخ خون کے خلیات کی تعداد کم ہے۔ اس سے آپ کو تھکاوٹ یا سانس کی تکلیف محسوس ہو سکتی ہے۔ عام وجوہات میں آئرن کی کمی یا خون کا ضیاع شامل ہے۔",
+        high: "آپ کے سرخ خون کے خلیات کی تعداد زیادہ ہے۔ یہ پانی کی کمی یا ایسی حالت کی وجہ سے ہو سکتا ہے جس سے آپ کا جسم بہت زیادہ سرخ خون کے خلیات بناتا ہے۔"
       }
     },
     hemoglobin: {
       en: {
-        normal: "Hemoglobin level is normal, indicating good oxygen transport capacity.",
-        low: "Low hemoglobin level indicates anemia which may cause fatigue, weakness, and shortness of breath. Causes include iron deficiency, blood loss, or chronic diseases.",
-        high: "High hemoglobin level may be due to dehydration, lung disease, polycythemia, or living at high altitudes. This can increase blood viscosity."
+        normal: "Your hemoglobin level is normal, which means your blood is carrying oxygen properly.",
+        low: "Your hemoglobin level is low, which might make you feel tired or weak. This is often due to iron deficiency or blood loss.",
+        high: "Your hemoglobin level is high. This could be due to dehydration or a condition that affects your red blood cells."
       },
       ur: {
-        normal: "ہیموگلوبن کی سطح معمول کے مطابق ہے، جو آکسیجن کی نقل و حمل کی اچھی صلاحیت کی نشاندہی کرتی ہے۔",
-        low: "ہیموگلوبن کی کم سطح خون کی کمی کی نشاندہی کرتی ہے جس سے تھکاوٹ، کمزوری، اور سانس پھولنا ہو سکتا ہے۔ اس کی وجوہات میں آئرن کی کمی، خون کا ضیاع، یا دائمی بیماریاں شامل ہیں۔",
-        high: "ہیموگلوبن کی زیادہ سطح پانی کی کمی، پھیپھڑوں کی بیماری، پولی سائتھیمیا، یا بلند ارتفاع پر رہنے کی وجہ سے ہو سکتی ہے۔ یہ خون کی چپچپاہٹ کو بڑھا سکتی ہے۔"
+        normal: "آپ کے ہیموگلوبن کی سطح معمول کے مطابق ہے، جس کا مطلب ہے کہ آپ کا خون صحیح طریقے سے آکسیجن لے جا رہا ہے۔",
+        low: "آپ کے ہیموگلوبن کی سطح کم ہے، جس سے آپ کو تھکاوٹ یا کمزوری محسوس ہو سکتی ہے۔ یہ اکثر آئرن کی کمی یا خون کے ضیاع کی وجہ سے ہوتا ہے۔",
+        high: "آپ کے ہیموگلوبن کی سطح زیادہ ہے۔ یہ پانی کی کمی یا ایسی حالت کی وجہ سے ہو سکتا ہے جو آپ کے سرخ خون کے خلیات کو متاثر کرتی ہے۔"
       }
     },
     hematocrit: {
       en: {
-        normal: "Hematocrit value is normal, indicating appropriate red blood cell volume in blood.",
-        low: "Low hematocrit suggests anemia or blood loss. This can cause fatigue and reduce oxygen delivery to tissues.",
-        high: "High hematocrit may indicate dehydration, polycythemia vera, or certain lung and heart diseases that cause reduced blood oxygen."
+        normal: "Your hematocrit is normal, which means you have a good balance of red blood cells in your blood.",
+        low: "Your hematocrit is low, which might indicate anemia or blood loss. This can make you feel tired.",
+        high: "Your hematocrit is high. This could be due to dehydration or a condition that causes your body to make too many red blood cells."
       },
       ur: {
-        normal: "ہیماٹوکرٹ کی قدر معمول کے مطابق ہے، جو خون میں سرخ خون کے خلیات کی مناسب مقدار کی نشاندہی کرتی ہے۔",
-        low: "کم ہیماٹوکرٹ خون کی کمی یا خون کے ضیاع کی نشاندہی کرتا ہے۔ یہ تھکاوٹ کا سبب بن سکتا ہے اور بافتوں تک آکسیجن کی فراہمی کو کم کر سکتا ہے۔",
-        high: "زیادہ ہیماٹوکرٹ پانی کی کمی، پولی سائتھیمیا ویرا، یا پھیپھڑوں اور دل کی کچھ بیماریوں کی نشاندہی کر سکتا ہے جو خون میں آکسیجن کی کمی کا سبب بنتی ہیں۔"
+        normal: "آپ کا ہیماٹوکرٹ معمول کے مطابق ہے، جس کا مطلب ہے کہ آپ کے خون میں سرخ خون کے خلیات کا اچھا توازن ہے۔",
+        low: "آپ کا ہیماٹوکرٹ کم ہے، جو خون کی کمی یا خون کے ضیاع کی نشاندہی کر سکتا ہے۔ اس سے آپ کو تھکاوٹ محسوس ہو سکتی ہے۔",
+        high: "آپ کا ہیماٹوکرٹ زیادہ ہے۔ یہ پانی کی کمی یا ایسی حالت کی وجہ سے ہو سکتا ہے جس سے آپ کا جسم بہت زیادہ سرخ خون کے خلیات بناتا ہے۔"
       }
     },
     platelets: {
       en: {
-        normal: "Platelet count is normal, indicating proper blood clotting function.",
-        low: "Low platelets (Thrombocytopenia) may increase risk of bleeding and bruising. Causes include immune disorders, medications, infections, or bone marrow problems.",
-        high: "High platelets (Thrombocytosis) may increase risk of clot formation. This can be reactive due to inflammation or related to bone marrow disorders."
+        normal: "Your platelet count is normal, which means your blood can clot properly when needed.",
+        low: "Your platelet count is low, which might mean you bruise or bleed more easily. This could be due to certain medications or conditions.",
+        high: "Your platelet count is high. This could be due to inflammation, infection, or certain blood disorders."
       },
       ur: {
-        normal: "پلیٹلیٹس کی تعداد معمول کے مطابق ہے، جو خون کے جمنے کی مناسب فعالیت کی نشاندہی کرتی ہے۔",
-        low: "کم پلیٹلیٹس (تھرومبوسائٹوپینیا) خون بہنے اور چوٹ لگنے کے خطرے کو بڑھا سکتی ہیں۔ اس کی وجوہات میں مدافعتی عوارض، دوائیاں، انفیکشنز، یا بون میرو کے مسائل شامل ہیں۔",
-        high: "زیادہ پلیٹلیٹس (تھرومبوسائٹوسس) خون کے لوتھڑے بننے کے خطرے کو بڑھا سکتی ہیں۔ یہ سوزش کی وجہ سے ردعمل ہو سکتی ہے یا بون میرو کی خرابیوں سے متعلق ہو سکتی ہے۔"
+        normal: "آپ کی پلیٹلیٹس کی تعداد معمول کے مطابق ہے، جس کا مطلب ہے کہ آپ کا خون ضرورت پڑنے پر صحیح طریقے سے جم سکتا ہے۔",
+        low: "آپ کی پلیٹلیٹس کی تعداد کم ہے، جس کا مطلب ہو سکتا ہے کہ آپ کو آسانی سے چوٹ لگ سکتی ہے یا خون بہہ سکتا ہے۔ یہ کچھ ادویات یا حالات کی وجہ سے ہو سکتا ہے۔",
+        high: "آپ کی پلیٹلیٹس کی تعداد زیادہ ہے۔ یہ سوزش، انفیکشن، یا کچھ خون کی خرابیوں کی وجہ سے ہو سکتا ہے۔"
       }
     },
     mcv: {
       en: {
-        normal: "Mean Corpuscular Volume is normal, indicating red blood cells are of appropriate size.",
-        low: "Low MCV (Microcytic) suggests iron deficiency anemia, thalassemia, or chronic disease.",
-        high: "High MCV (Macrocytic) may indicate vitamin B12 or folate deficiency, liver disease, or alcoholism."
+        normal: "The size of your red blood cells is normal.",
+        low: "Your red blood cells are smaller than normal. This is often due to iron deficiency or certain genetic conditions.",
+        high: "Your red blood cells are larger than normal. This could be due to vitamin B12 or folate deficiency."
       },
       ur: {
-        normal: "میان کارپسکولر والیوم معمول کے مطابق ہے، جو سرخ خون کے خلیات کے مناسب سائز کی نشاندہی کرتا ہے۔",
-        low: "کم ایم سی وی (مائکروسیٹک) آئرن کی کمی سے خون کی کمی، تھیلیسیمیا، یا دائمی بیماری کا اشارہ کرتا ہے۔",
-        high: "زیادہ ایم سی وی (میکروسیٹک) وٹامن بی12 یا فولیٹ کی کمی، جگر کی بیماری، یا شراب نوشی کی نشاندہی کر سکتا ہے۔"
+        normal: "آپ کے سرخ خون کے خلیات کا سائز معمول کے مطابق ہے۔",
+        low: "آپ کے سرخ خون کے خلیات معمول سے چھوٹے ہیں۔ یہ اکثر آئرن کی کمی یا کچھ جینیاتی حالات کی وجہ سے ہوتا ہے۔",
+        high: "آپ کے سرخ خون کے خلیات معمول سے بڑے ہیں۔ یہ وٹامن بی 12 یا فولیٹ کی کمی کی وجہ سے ہو سکتا ہے۔"
       }
     },
     mch: {
       en: {
-        normal: "Mean Corpuscular Hemoglobin is normal, indicating appropriate hemoglobin content in red blood cells.",
-        low: "Low MCH suggests iron deficiency or thalassemia, resulting in less hemoglobin per red blood cell.",
-        high: "High MCH is often seen with macrocytic anemia, related to B12 or folate deficiency."
+        normal: "The amount of hemoglobin in your red blood cells is normal.",
+        low: "Your red blood cells contain less hemoglobin than normal. This is often related to iron deficiency.",
+        high: "Your red blood cells contain more hemoglobin than normal. This is often seen with larger red blood cells."
       },
       ur: {
-        normal: "میان کارپسکولر ہیموگلوبن معمول کے مطابق ہے، جو سرخ خون کے خلیات میں مناسب ہیموگلوبن مواد کی نشاندہی کرتا ہے۔",
-        low: "کم ایم سی ایچ آئرن کی کمی یا تھیلیسیمیا کا اشارہ کرتا ہے، جس کے نتیجے میں ہر سرخ خون کے خلیے میں کم ہیموگلوبن ہوتا ہے۔",
-        high: "زیادہ ایم سی ایچ اکثر میکروسیٹک انیمیا کے ساتھ دیکھا جاتا ہے، جو بی12 یا فولیٹ کی کمی سے متعلق ہے۔"
+        normal: "آپ کے سرخ خون کے خلیات میں ہیموگلوبن کی مقدار معمول کے مطابق ہے۔",
+        low: "آپ کے سرخ خون کے خلیات میں معمول سے کم ہیموگلوبن ہے۔ یہ اکثر آئرن کی کمی سے متعلق ہوتا ہے۔",
+        high: "آپ کے سرخ خون کے خلیات میں معمول سے زیادہ ہیموگلوبن ہے۔ یہ اکثر بڑے سرخ خون کے خلیات کے ساتھ دیکھا جاتا ہے۔"
       }
     },
     mchc: {
       en: {
-        normal: "MCHC is normal, indicating appropriate concentration of hemoglobin in red blood cells.",
-        low: "Low MCHC suggests hypochromic anemia, often due to iron deficiency.",
-        high: "High MCHC may indicate spherocytosis or other red blood cell membrane disorders."
+        normal: "The concentration of hemoglobin in your red blood cells is normal.",
+        low: "The concentration of hemoglobin in your red blood cells is lower than normal. This often happens with iron deficiency.",
+        high: "The concentration of hemoglobin in your red blood cells is higher than normal. This might indicate a problem with your red blood cells."
       },
       ur: {
-        normal: "ایم سی ایچ سی معمول کے مطابق ہے، جو سرخ خون کے خلیات میں ہیموگلوبن کی مناسب مقدار کی نشاندہی کرتا ہے۔",
-        low: "کم ایم سی ایچ سی ہائپوکرومک انیمیا کا اشارہ کرتا ہے، جو اکثر آئرن کی کمی کی وجہ سے ہوتا ہے۔",
-        high: "زیادہ ایم سی ایچ سی سفیروسائٹوسس یا سرخ خون کے خلیات کی جھلی کی دیگر خرابیوں کی نشاندہی کر سکتا ہے۔"
+        normal: "آپ کے سرخ خون کے خلیات میں ہیموگلوبن کی مقدار معمول کے مطابق ہے۔",
+        low: "آپ کے سرخ خون کے خلیات میں ہیموگلوبن کی مقدار معمول سے کم ہے۔ یہ اکثر آئرن کی کمی کے ساتھ ہوتا ہے۔",
+        high: "آپ کے سرخ خون کے خلیات میں ہیموگلوبن کی مقدار معمول سے زیادہ ہے۔ یہ آپ کے سرخ خون کے خلیات میں کسی مسئلے کی نشاندہی کر سکتا ہے۔"
       }
     },
     neutrophils: {
       en: {
-        normal: "Neutrophil percentage is normal, indicating appropriate immune function against bacterial infections.",
-        low: "Low neutrophils (Neutropenia) may be due to viral infections, certain medications, or bone marrow disorders, increasing risk of bacterial infections.",
-        high: "High neutrophils (Neutrophilia) suggest bacterial infection, inflammation, stress, or certain medications."
+        normal: "Your neutrophil count is normal. These are white blood cells that help fight bacterial infections.",
+        low: "Your neutrophil count is low. These are white blood cells that fight bacterial infections. Low levels can increase your risk of infections.",
+        high: "Your neutrophil count is high. This usually means your body is fighting a bacterial infection or inflammation."
       },
       ur: {
-        normal: "نیوٹروفل کی فیصد معمول کے مطابق ہے، جو بیکٹیریل انفیکشن کے خلاف مناسب مدافعتی فعالیت کی نشاندہی کرتی ہے۔",
-        low: "کم نیوٹروفلز (نیوٹروپینیا) وائرل انفیکشن، کچھ ادویات، یا بون میرو کی خرابیوں کی وجہ سے ہو سکتی ہے، جس سے بیکٹیریل انفیکشن کا خطرہ بڑھ جاتا ہے۔",
-        high: "زیادہ نیوٹروفلز (نیوٹروفیلیا) بیکٹیریل انفیکشن، سوزش، تناؤ، یا کچھ ادویات کی طرف اشارہ کرتے ہیں۔"
+        normal: "آپ کے نیوٹروفل کی تعداد معمول کے مطابق ہے۔ یہ سفید خون کے خلیات ہیں جو بیکٹیریل انفیکشن سے لڑنے میں مدد کرتے ہیں۔",
+        low: "آپ کے نیوٹروفل کی تعداد کم ہے۔ یہ سفید خون کے خلیات ہیں جو بیکٹیریل انفیکشن سے لڑتے ہیں۔ کم سطح انفیکشن کے خطرے کو بڑھا سکتی ہے۔",
+        high: "آپ کے نیوٹروفل کی تعداد زیادہ ہے۔ اس کا عام طور پر مطلب ہے کہ آپ کا جسم بیکٹیریل انفیکشن یا سوزش سے لڑ رہا ہے۔"
       }
     },
     lymphocytes: {
       en: {
-        normal: "Lymphocyte percentage is normal, indicating proper immune function against viral infections.",
-        low: "Low lymphocytes (Lymphopenia) may be due to infections, autoimmune disorders, or certain medications.",
-        high: "High lymphocytes (Lymphocytosis) may indicate viral infection, certain bacterial infections, or lymphocytic leukemia."
+        normal: "Your lymphocyte count is normal. These are white blood cells that help fight viral infections.",
+        low: "Your lymphocyte count is low. These are white blood cells that fight viral infections. This could be due to infections, stress, or certain medications.",
+        high: "Your lymphocyte count is high. This usually means your body is fighting a viral infection."
       },
       ur: {
-        normal: "لمفوسائٹ کی فیصد معمول کے مطابق ہے، جو وائرل انفیکشن کے خلاف مناسب مدافعتی فعالیت کی نشاندہی کرتی ہے۔",
-        low: "کم لمفوسائٹس (لمفوپینیا) انفیکشن، آٹو امیون عوارض، یا کچھ ادویات کی وجہ سے ہو سکتی ہے۔",
-        high: "زیادہ لمفوسائٹس (لمفوسائٹوسس) وائرل انفیکشن، کچھ بیکٹیریل انفیکشن، یا لمفوسیٹک لیوکیمیا کی نشاندہی کر سکتی ہے۔"
+        normal: "آپ کے لمفوسائٹ کی تعداد معمول کے مطابق ہے۔ یہ سفید خون کے خلیات ہیں جو وائرل انفیکشن سے لڑنے میں مدد کرتے ہیں۔",
+        low: "آپ کے لمفوسائٹ کی تعداد کم ہے۔ یہ سفید خون کے خلیات ہیں جو وائرل انفیکشن سے لڑتے ہیں۔ یہ انفیکشن، تناؤ، یا کچھ ادویات کی وجہ سے ہو سکتا ہے۔",
+        high: "آپ کے لمفوسائٹ کی تعداد زیادہ ہے۔ اس کا عام طور پر مطلب ہے کہ آپ کا جسم وائرل انفیکشن سے لڑ رہا ہے۔"
       }
     },
     monocytes: {
       en: {
-        normal: "Monocyte percentage is normal, indicating proper function of this component of the immune system.",
-        low: "Low monocytes are rare but may be associated with bone marrow disorders or certain medications.",
-        high: "High monocytes (Monocytosis) may indicate chronic infection, autoimmune disorders, or certain blood disorders."
+        normal: "Your monocyte count is normal. These are white blood cells that help clean up infection sites.",
+        low: "Your monocyte count is low. This is rarely a concern on its own.",
+        high: "Your monocyte count is high. This might mean you have a chronic infection or inflammation."
       },
       ur: {
-        normal: "مونوسائٹ کی فیصد معمول کے مطابق ہے، جو مدافعتی نظام کے اس جزو کی مناسب فعالیت کی نشاندہی کرتی ہے۔",
-        low: "کم مونوسائٹس نادر ہیں لیکن بون میرو کی خرابیوں یا کچھ ادویات سے منسلک ہو سکتی ہیں۔",
-        high: "زیادہ مونوسائٹس (مونوسائٹوسس) دائمی انفیکشن، آٹو امیون عوارض، یا کچھ خون کی خرابیوں کی نشاندہی کر سکتی ہے۔"
+        normal: "آپ کے مونوسائٹ کی تعداد معمول کے مطابق ہے۔ یہ سفید خون کے خلیات ہیں جو انفیکشن کے مقامات کو صاف کرنے میں مدد کرتے ہیں۔",
+        low: "آپ کے مونوسائٹ کی تعداد کم ہے۔ یہ اکیلے شاذ ہی تشویش کا باعث ہوتا ہے۔",
+        high: "آپ کے مونوسائٹ کی تعداد زیادہ ہے۔ اس کا مطلب ہو سکتا ہے کہ آپ کو کوئی دائمی انفیکشن یا سوزش ہے۔"
       }
     },
     eosinophils: {
       en: {
-        normal: "Eosinophil percentage is normal, indicating no significant allergic response or parasitic infection.",
-        low: "Low eosinophils are typically not clinically significant.",
-        high: "High eosinophils (Eosinophilia) may indicate allergic disorders, parasitic infections, or certain autoimmune conditions."
+        normal: "Your eosinophil count is normal. These are white blood cells that help with allergic responses and fighting parasites.",
+        low: "Your eosinophil count is low. This usually isn't a concern.",
+        high: "Your eosinophil count is high. This might be due to allergies, asthma, or parasitic infections."
       },
       ur: {
-        normal: "ایوسینوفل کی فیصد معمول کے مطابق ہے، جو کسی قابل ذکر الرجک ردعمل یا پیراسیٹک انفیکشن کی عدم موجودگی کی نشاندہی کرتی ہے۔",
-        low: "کم ایوسینوفلز عام طور پر کلینیکل طور پر اہم نہیں ہوتے۔",
-        high: "زیادہ ایوسینوفلز (ایوسینوفیلیا) الرجک عوارض، پیراسیٹک انفیکشن، یا کچھ آٹو امیون حالات کی نشاندہی کر سکتی ہے۔"
+        normal: "آپ کے ایوسینوفل کی تعداد معمول کے مطابق ہے۔ یہ سفید خون کے خلیات ہیں جو الرجک ردعمل اور پیراسائٹس سے لڑنے میں مدد کرتے ہیں۔",
+        low: "آپ کے ایوسینوفل کی تعداد کم ہے۔ یہ عام طور پر تشویش کا باعث نہیں ہوتا۔",
+        high: "آپ کے ایوسینوفل کی تعداد زیادہ ہے۔ یہ الرجی، دمہ، یا پیراسیٹک انفیکشن کی وجہ سے ہو سکتا ہے۔"
       }
     },
     basophils: {
       en: {
-        normal: "Basophil percentage is normal.",
-        low: "Low basophils are typically not clinically significant.",
-        high: "High basophils (Basophilia) are rare but may be associated with certain inflammatory and allergic reactions or myeloproliferative disorders."
+        normal: "Your basophil count is normal. These are rare white blood cells that play a role in allergic responses.",
+        low: "Your basophil count is low. This usually isn't a concern.",
+        high: "Your basophil count is high. This is rare and might be related to allergic reactions or certain blood disorders."
       },
       ur: {
-        normal: "بیسوفل کی فیصد معمول کے مطابق ہے۔",
-        low: "کم بیسوفلز عام طور پر کلینیکل طور پر اہم نہیں ہوتے۔",
-        high: "زیادہ بیسوفلز (بیسوفیلیا) نادر ہیں لیکن کچھ سوزش اور الرجک ردعمل یا میلوپرولیفریٹو عوارض سے منسلک ہو سکتے ہیں۔"
+        normal: "آپ کے بیسوفل کی تعداد معمول کے مطابق ہے۔ یہ نایاب سفید خون کے خلیات ہیں جو الرجک ردعمل میں کردار ادا کرتے ہیں۔",
+        low: "آپ کے بیسوفل کی تعداد کم ہے۔ یہ عام طور پر تشویش کا باعث نہیں ہوتا۔",
+        high: "آپ کے بیسوفل کی تعداد زیادہ ہے۔ یہ نایاب ہے اور الرجک ردعمل یا کچھ خون کی خرابیوں سے متعلق ہو سکتا ہے۔"
       }
     }
   };
@@ -184,14 +184,14 @@ const generateInterpretation = (parameter: string, status: 'normal' | 'low' | 'h
   // Default interpretation if specific parameter is not found
   const defaultInterp = {
     en: {
-      normal: `${parameter} is within normal range.`,
-      low: `${parameter} is below normal range.`,
-      high: `${parameter} is above normal range.`
+      normal: `Your ${parameter} level is normal.`,
+      low: `Your ${parameter} level is lower than normal.`,
+      high: `Your ${parameter} level is higher than normal.`
     },
     ur: {
-      normal: `${parameter} معمول کی حد میں ہے۔`,
-      low: `${parameter} معمول سے کم ہے۔`,
-      high: `${parameter} معمول سے زیادہ ہے۔`
+      normal: `آپ کی ${parameter} کی سطح معمول کے مطابق ہے۔`,
+      low: `آپ کی ${parameter} کی سطح معمول سے کم ہے۔`,
+      high: `آپ کی ${parameter} کی سطح معمول سے زیادہ ہے۔`
     }
   };
 
@@ -213,53 +213,53 @@ const analyzeRelationships = (results: CBCResult[]): { en: string; ur: string }[
     return map;
   }, {} as Record<string, CBCResult>);
   
-  // Check for anemia patterns
+  // Check for anemia patterns - simplified explanations
   if (resultMap.hemoglobin && resultMap.hemoglobin.status === 'low') {
     // Microcytic anemia (Iron deficiency)
     if (resultMap.mcv && resultMap.mcv.status === 'low') {
       findings.push({
-        en: "The pattern of low hemoglobin with small red blood cells (low MCV) suggests microcytic anemia, commonly caused by iron deficiency.",
-        ur: "ہیموگلوبن کی کمی کے ساتھ چھوٹے سرخ خون کے خلیات (کم ایم سی وی) کا پیٹرن مائکروسیٹک انیمیا کی طرف اشارہ کرتا ہے، جو عام طور پر آئرن کی کمی کی وجہ سے ہوتا ہے۔"
+        en: "Your results show low hemoglobin with smaller-than-normal red blood cells. This pattern often points to iron deficiency, which is a common cause of anemia. It may cause fatigue and weakness.",
+        ur: "آپ کے نتائج کم ہیموگلوبن اور معمول سے چھوٹے سرخ خون کے خلیات دکھاتے ہیں۔ یہ پیٹرن اکثر آئرن کی کمی کی طرف اشارہ کرتا ہے، جو خون کی کمی کی ایک عام وجہ ہے۔ اس سے تھکاوٹ اور کمزوری ہو سکتی ہے۔"
       });
     }
     
     // Macrocytic anemia (B12/Folate deficiency)
     if (resultMap.mcv && resultMap.mcv.status === 'high') {
       findings.push({
-        en: "The pattern of low hemoglobin with large red blood cells (high MCV) suggests macrocytic anemia, which may be related to vitamin B12 or folate deficiency.",
-        ur: "ہیموگلوبن کی کمی کے ساتھ بڑے سرخ خون کے خلیات (زیادہ ایم سی وی) کا پیٹرن میکروسیٹک انیمیا کی طرف اشارہ کرتا ہے، جو وٹامن بی 12 یا فولیٹ کی کمی سے متعلق ہو سکتا ہے۔"
+        en: "Your results show low hemoglobin with larger-than-normal red blood cells. This pattern often suggests a vitamin B12 or folate deficiency. This type of anemia can cause fatigue and sometimes nerve problems.",
+        ur: "آپ کے نتائج کم ہیموگلوبن اور معمول سے بڑے سرخ خون کے خلیات دکھاتے ہیں۔ یہ پیٹرن اکثر وٹامن بی12 یا فولیٹ کی کمی کی طرف اشارہ کرتا ہے۔ اس قسم کی خون کی کمی سے تھکاوٹ اور کبھی کبھار اعصابی مسائل ہو سکتے ہیں۔"
       });
     }
     
     // Normocytic anemia (Chronic disease)
     if (resultMap.mcv && resultMap.mcv.status === 'normal') {
       findings.push({
-        en: "The pattern of low hemoglobin with normal-sized red blood cells (normal MCV) suggests normocytic anemia, which can be associated with chronic diseases, kidney disease, or recent blood loss.",
-        ur: "ہیموگلوبن کی کمی کے ساتھ معمول کے سائز کے سرخ خون کے خلیات (عام ایم سی وی) کا پیٹرن نارموسیٹک انیمیا کی طرف اشارہ کرتا ہے، جو دائمی بیماریوں، گردے کی بیماری، یا حالیہ خون کے ضیاع سے منسلک ہو سکتا ہے۔"
+        en: "Your results show low hemoglobin with normal-sized red blood cells. This pattern can be seen with chronic health conditions, recent blood loss, or kidney problems.",
+        ur: "آپ کے نتائج کم ہیموگلوبن اور معمول کے سائز کے سرخ خون کے خلیات دکھاتے ہیں۔ یہ پیٹرن دائمی صحت کی خرابیوں، حالیہ خون کے ضیاع، یا گردے کے مسائل کے ساتھ دیکھا جا سکتا ہے۔"
       });
     }
   }
   
-  // Check for infection or inflammation
+  // Check for infection or inflammation - simplified explanations
   if (resultMap.wbc && resultMap.wbc.status === 'high') {
     if (resultMap.neutrophils && resultMap.neutrophils.status === 'high') {
       findings.push({
-        en: "Elevated white blood cells with high neutrophils suggests a bacterial infection or acute inflammation.",
-        ur: "زیادہ سفید خون کے خلیات کے ساتھ زیادہ نیوٹروفلز بیکٹیریل انفیکشن یا شدید سوزش کی طرف اشارہ کرتے ہیں۔"
+        en: "Your high white blood cell count, particularly neutrophils, suggests your body may be fighting a bacterial infection or inflammation.",
+        ur: "آپ کے سفید خون کے خلیات کی زیادہ تعداد، خاص طور پر نیوٹروفلز، بتاتی ہے کہ آپ کا جسم بیکٹیریل انفیکشن یا سوزش سے لڑ رہا ہو سکتا ہے۔"
       });
     }
     
     if (resultMap.lymphocytes && resultMap.lymphocytes.status === 'high') {
       findings.push({
-        en: "Elevated white blood cells with high lymphocytes suggests a viral infection or certain lymphoproliferative disorders.",
-        ur: "زیادہ سفید خون کے خلیات کے ساتھ زیادہ لمفوسائٹس وائرل انفیکشن یا کچھ لمفوپرولیفریٹو عوارض کی طرف اشارہ کرتے ہیں۔"
+        en: "Your high white blood cell count, particularly lymphocytes, suggests your body may be fighting a viral infection.",
+        ur: "آپ کے سفید خون کے خلیات کی زیادہ تعداد، خاص طور پر لمفوسائٹس، بتاتی ہے کہ آپ کا جسم وائرل انفیکشن سے لڑ رہا ہو سکتا ہے۔"
       });
     }
     
     if (resultMap.eosinophils && resultMap.eosinophils.status === 'high') {
       findings.push({
-        en: "Elevated eosinophils suggests an allergic reaction, parasitic infection, or certain autoimmune conditions.",
-        ur: "زیادہ ایوسینوفلز الرجک ردعمل، پیراسیٹک انفیکشن، یا کچھ آٹو امیون حالات کی طرف اشارہ کرتے ہیں۔"
+        en: "Your high eosinophil count suggests you might have allergies, asthma, or a parasitic infection.",
+        ur: "آپ کے ایوسینوفلز کی زیادہ تعداد بتاتی ہے کہ آپ کو الرجی، دمہ، یا پیراسیٹک انفیکشن ہو سکتا ہے۔"
       });
     }
   }
@@ -267,8 +267,8 @@ const analyzeRelationships = (results: CBCResult[]): { en: string; ur: string }[
   // Check for potential bleeding disorder
   if (resultMap.platelets && resultMap.platelets.status === 'low') {
     findings.push({
-      en: "Low platelet count may increase the risk of bleeding or bruising.",
-      ur: "پلیٹلیٹس کی کم تعداد خون بہنے یا چوٹ لگنے کے خطرے کو بڑھا سکتی ہے۔"
+      en: "Your low platelet count means you might bruise or bleed more easily than normal. Talk to your doctor if you notice unusual bruising or bleeding.",
+      ur: "آپ کی پلیٹلیٹس کی کم تعداد کا مطلب ہے کہ آپ کو معمول سے زیادہ آسانی سے چوٹ لگ سکتی ہے یا خون بہہ سکتا ہے۔ اگر آپ کو غیر معمولی چوٹ یا خون بہنا نظر آتا ہے تو اپنے ڈاکٹر سے بات کریں۔"
     });
   }
   
@@ -277,8 +277,8 @@ const analyzeRelationships = (results: CBCResult[]): { en: string; ur: string }[
       resultMap.hemoglobin && resultMap.hemoglobin.status === 'high' && 
       resultMap.hematocrit && resultMap.hematocrit.status === 'high') {
     findings.push({
-      en: "The combination of elevated red blood cells, hemoglobin, and hematocrit may indicate polycythemia, which could be due to dehydration or a bone marrow disorder.",
-      ur: "سرخ خون کے خلیات، ہیموگلوبن، اور ہیماٹوکرٹ کے بلند امتزاج سے پولی سائٹھیمیا کا پتہ چل سکتا ہے، جو پانی کی کمی یا بون میرو کی خرابی کی وجہ سے ہو سکتا ہے۔"
+      en: "Your results show high levels of red blood cells, hemoglobin, and hematocrit. This could be due to dehydration or a condition that causes your body to make too many red blood cells.",
+      ur: "آپ کے نتائج سرخ خون کے خلیات، ہیموگلوبن، اور ہیماٹوکرٹ کی زیادہ سطح دکھاتے ہیں۔ یہ پانی کی کمی یا ایسی حالت کی وجہ سے ہو سکتا ہے جس سے آپ کا جسم بہت زیادہ سرخ خون کے خلیات بناتا ہے۔"
     });
   }
   
@@ -292,13 +292,13 @@ const checkForCriticalValues = (results: CBCResult[]): { en: string; ur: string 
   for (const result of results) {
     const { parameter, status, deviation } = result;
     
-    // Critical thresholds for common parameters
+    // Critical thresholds for common parameters - with simplified explanations
     switch (parameter.id) {
       case 'hemoglobin':
         if (status === 'low' && parseFloat(parameter.value) < 7.0) {
           criticalAlerts.push({
-            en: "CRITICAL: Hemoglobin is severely low. This may require immediate medical attention.",
-            ur: "انتباہ: ہیموگلوبن انتہائی کم ہے۔ اس کے لیے فوری طبی توجہ کی ضرورت ہو سکتی ہے۔"
+            en: "IMPORTANT: Your hemoglobin is very low. This needs medical attention soon as you might feel very tired, dizzy, or short of breath.",
+            ur: "اہم: آپ کا ہیموگلوبن بہت کم ہے۔ اس کے لیے جلد طبی توجہ کی ضرورت ہے کیونکہ آپ کو بہت تھکاوٹ، چکر آنا، یا سانس کی تکلیف محسوس ہو سکتی ہے۔"
           });
         }
         break;
@@ -306,13 +306,13 @@ const checkForCriticalValues = (results: CBCResult[]): { en: string; ur: string 
       case 'wbc':
         if (status === 'low' && parseFloat(parameter.value) < 2.0) {
           criticalAlerts.push({
-            en: "CRITICAL: White blood cell count is severely low, indicating a high risk of infection.",
-            ur: "انتباہ: سفید خون کے خلیات کی تعداد انتہائی کم ہے، جو انفیکشن کے زیادہ خطرے کی نشاندہی کرتی ہے۔"
+            en: "IMPORTANT: Your white blood cell count is very low. This means your body may have trouble fighting infections. Contact your doctor soon.",
+            ur: "اہم: آپ کے سفید خون کے خلیات کی تعداد بہت کم ہے۔ اس کا مطلب ہے کہ آپ کے جسم کو انفیکشن سے لڑنے میں مشکل ہو سکتی ہے۔ جلد اپنے ڈاکٹر سے رابطہ کریں۔"
           });
         } else if (status === 'high' && parseFloat(parameter.value) > 30.0) {
           criticalAlerts.push({
-            en: "CRITICAL: White blood cell count is extremely high, which may indicate a severe infection or blood disorder.",
-            ur: "انتباہ: سفید خون کے خلیات کی تعداد انتہائی زیادہ ہے، جو شدید انفیکشن یا خون کی خرابی کی نشاندہی کر سکتی ہے۔"
+            en: "IMPORTANT: Your white blood cell count is very high. Contact your doctor soon as this could indicate a serious infection or blood disorder.",
+            ur: "اہم: آپ کے سفید خون کے خلیات کی تعداد بہت زیادہ ہے۔ جلد اپنے ڈاکٹر سے رابطہ کریں کیونکہ یہ سنگین انفیکشن یا خون کی خرابی کی نشاندہی کر سکتا ہے۔"
           });
         }
         break;
@@ -320,8 +320,8 @@ const checkForCriticalValues = (results: CBCResult[]): { en: string; ur: string 
       case 'platelets':
         if (status === 'low' && parseFloat(parameter.value) < 30.0) {
           criticalAlerts.push({
-            en: "CRITICAL: Platelet count is dangerously low, indicating a high risk of bleeding.",
-            ur: "انتباہ: پلیٹلیٹس کی تعداد خطرناک حد تک کم ہے، جو خون بہنے کے زیادہ خطرے کی نشاندہی کرتی ہے۔"
+            en: "IMPORTANT: Your platelet count is very low. This increases your risk of serious bleeding. Contact your doctor soon.",
+            ur: "اہم: آپ کی پلیٹلیٹس کی تعداد بہت کم ہے۔ اس سے سنگین خون بہنے کا خطرہ بڑھ جاتا ہے۔ جلد اپنے ڈاکٹر سے رابطہ کریں۔"
           });
         }
         break;
@@ -331,14 +331,14 @@ const checkForCriticalValues = (results: CBCResult[]): { en: string; ur: string 
   return criticalAlerts;
 };
 
-// Generate summary based on overall findings
+// Generate summary based on overall findings - simplified for layperson understanding
 const generateSummary = (results: CBCResult[]): { en: string; ur: string } => {
   const abnormalResults = results.filter(r => r.status !== 'normal');
   
   if (abnormalResults.length === 0) {
     return {
-      en: "All CBC parameters are within normal ranges. No significant abnormalities detected.",
-      ur: "سی بی سی کے تمام پیرامیٹرز معمول کی حدود میں ہیں۔ کوئی قابل ذکر غیر معمولی بات نہیں پائی گئی۔"
+      en: "Good news! All your blood test results are within normal ranges. This suggests your blood cells and related components are at healthy levels.",
+      ur: "اچھی خبر! آپ کے خون کے ٹیسٹ کے تمام نتائج معمول کی حدود میں ہیں۔ اس سے پتہ چلتا ہے کہ آپ کے خون کے خلیات اور متعلقہ اجزاء صحت مند سطح پر ہیں۔"
     };
   }
   
@@ -352,9 +352,9 @@ const generateSummary = (results: CBCResult[]): { en: string; ur: string } => {
   // Check for critical values
   const criticalAlerts = checkForCriticalValues(results);
   
-  // Generic summary with relationship findings
-  let enSummary = `Your CBC results show ${abnormalResults.length} abnormal values (${lowCount} low, ${highCount} high). `;
-  let urSummary = `آپ کے سی بی سی کے نتائج ${abnormalResults.length} غیر معمولی اقدار دکھاتے ہیں (${lowCount} کم، ${highCount} زیادہ)۔ `;
+  // Create a friendly, easy-to-understand summary
+  let enSummary = `Your blood test results show ${abnormalResults.length} values that are outside the normal range (${lowCount} low and ${highCount} high). `;
+  let urSummary = `آپ کے خون کے ٹیسٹ کے نتائج ${abnormalResults.length} قدروں کو دکھاتے ہیں جو معمول کی حد سے باہر ہیں (${lowCount} کم اور ${highCount} زیادہ)۔ `;
   
   // Add critical alerts to the beginning if present
   if (criticalAlerts.length > 0) {
@@ -364,12 +364,15 @@ const generateSummary = (results: CBCResult[]): { en: string; ur: string } => {
   
   // Add key relationship findings
   if (relationshipFindings.length > 0) {
-    enSummary += relationshipFindings.map(finding => finding.en).join(' ');
-    urSummary += relationshipFindings.map(finding => finding.ur).join(' ');
-  } else {
-    enSummary += "Please consult with a healthcare provider to interpret these findings.";
-    urSummary += "ان نتائج کی تشریح کے لیے براہ کرم کسی ہیلتھ کیئر فراہم کنندہ سے مشورہ کریں۔";
+    const enFindings = relationshipFindings.map(finding => finding.en).join(' ');
+    const urFindings = relationshipFindings.map(finding => finding.ur).join(' ');
+    enSummary += enFindings + ' ';
+    urSummary += urFindings + ' ';
   }
+  
+  // Add general advice
+  enSummary += "Please discuss these results with your healthcare provider to understand what they mean for your overall health.";
+  urSummary += "براہ کرم ان نتائج کے بارے میں اپنے ہیلتھ کیئر فراہم کنندہ سے بات کریں تاکہ آپ سمجھ سکیں کہ ان کا آپ کی مجموعی صحت کے لیے کیا مطلب ہے۔";
   
   return {
     en: enSummary,

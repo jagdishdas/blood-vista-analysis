@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -308,7 +307,7 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                       }} 
                     />
                     <Tooltip 
-                      formatter={(value, name, props) => {
+                      formatter={(value: number, name, props) => {
                         const item = props.payload;
                         return [
                           `${value.toFixed(1)}% ${value > 0 ? 'above' : 'below'} normal range`,
@@ -319,9 +318,7 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                     <Bar 
                       dataKey="deviation" 
                       name={language === "en" ? "Deviation" : "انحراف"}
-                      fill="#8884d8"
-                      barSize={30}
-                      fill={({ status }) => getStatusColor(status)}
+                      fill={(props) => getStatusColor(props.status)}
                     />
                     <Legend />
                     <ReferenceLine y={0} stroke="#000" />

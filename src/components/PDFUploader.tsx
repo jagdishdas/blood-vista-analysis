@@ -50,7 +50,7 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
           description: language === 'en'
             ? 'The scan quality is low. Results may not be accurate.'
             : 'اسکین کا معیار کم ہے۔ نتائج درست نہیں ہوسکتے ہیں۔',
-          variant: 'warning'
+          variant: 'default'
         });
       }
       

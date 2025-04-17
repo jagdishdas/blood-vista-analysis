@@ -1,6 +1,6 @@
 
 import { createWorker } from 'tesseract.js';
-import { OCRResult, ExtractedCBCData } from '@/types/cbc.types';
+import { OCRResult, ExtractedCBCData, CBCParameter, CBCFormData } from '@/types/cbc.types';
 
 // Create a Tesseract worker for OCR processing
 const createOCRWorker = async () => {

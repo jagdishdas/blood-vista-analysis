@@ -1,4 +1,5 @@
-import { createWorker } from 'tesseract.js';
+
+import { createWorker, PSM, OEM } from 'tesseract.js';
 import { OCRResult, ExtractedCBCData, CBCParameter, CBCFormData } from '@/types/cbc.types';
 import { pdfjs } from 'react-pdf';
 import { preprocessImageForOCR, enhanceOCRText, extractMedicalValues } from './ocr-enhancer';
@@ -11,8 +12,8 @@ const createOCRWorker = async () => {
   const worker = await createWorker('eng');
   await worker.setParameters({
     tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-+:%/ ×³⁶µ',
-    tessedit_pageseg_mode: '6', // Uniform block of text
-    tessedit_ocr_engine_mode: '2', // Use LSTM OCR Engine only
+    tessedit_pageseg_mode: PSM.UNIFORM_BLOCK, // Use PSM enum instead of string
+    tessedit_ocr_engine_mode: OEM.LSTM_ONLY, // Use OEM enum instead of string
   });
   return worker;
 };

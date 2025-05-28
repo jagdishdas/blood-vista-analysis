@@ -27,6 +27,8 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
       const selectedFile = e.target.files[0];
       setErrorMessage(null);
       
+      console.log(`Selected ${type} file:`, selectedFile.name, selectedFile.size, selectedFile.type);
+      
       // Check if the file is of the correct type
       if (type === 'pdf' && !selectedFile.type.includes('pdf')) {
         toast({
@@ -60,16 +62,26 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
     setErrorMessage(null);
     
     try {
+      console.log(`Processing ${fileType} file: ${file.name}`);
+      
       let ocrResult;
       
       // Process based on file type
       if (fileType === 'pdf') {
+        console.log('Starting PDF processing...');
         ocrResult = await processPDF(file);
+        console.log('PDF processing completed, confidence:', ocrResult.confidence);
       } else {
+        console.log('Starting image processing...');
         ocrResult = await processImageFile(file);
+        console.log('Image processing completed, confidence:', ocrResult.confidence);
       }
       
+      console.log('OCR Text length:', ocrResult.text.length);
+      console.log('OCR Text preview:', ocrResult.text.substring(0, 500));
+      
       if (ocrResult.confidence < 60) {
+        console.warn('Low OCR confidence:', ocrResult.confidence);
         toast({
           title: language === 'en' ? 'Low Quality Scan' : 'کم معیار کی اسکین',
           description: language === 'en'
@@ -79,7 +91,9 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
         });
       }
       
+      console.log('Starting CBC data extraction...');
       const extractedData = extractCBCData(ocrResult.text);
+      console.log('Extracted CBC data:', extractedData);
       
       if (extractedData.parameters.length === 0) {
         setErrorMessage(language === 'en'
@@ -96,14 +110,17 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
         return;
       }
       
+      console.log('Converting to form data...');
       const formData = convertToCBCFormData(extractedData, parameters);
+      console.log('Form data ready:', formData);
+      
       onExtracted(formData);
       
       toast({
         title: language === 'en' ? 'Report Processed Successfully' : 'رپورٹ کامیابی سے پروسیس کی گئی',
         description: language === 'en'
-          ? `Extracted ${extractedData.parameters.length} parameters. Please verify the values before analysis.`
-          : `${extractedData.parameters.length} پیرامیٹرز نکالے گئے۔ براہ کرم تجزیہ سے پہلے قدروں کی تصدیق کریں۔`,
+          ? `Extracted ${extractedData.parameters.length} parameters with world standard units. Please verify the values before analysis.`
+          : `${extractedData.parameters.length} پیرامیٹرز عالمی معیاری یونٹس کے ساتھ نکالے گئے۔ براہ کرم تجزیہ سے پہلے قدروں کی تصدیق کریں۔`,
         variant: 'default'
       });
       
@@ -133,8 +150,8 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
         </CardTitle>
         <CardDescription>
           {language === 'en' 
-            ? 'Upload your CBC report as PDF or image for automatic extraction' 
-            : 'خودکار استخراج کے لیے اپنی سی بی سی رپورٹ پی ڈی ایف یا تصویر کے طور پر اپلوڈ کریں'}
+            ? 'Upload your CBC report as PDF or image for automatic extraction with world standard units' 
+            : 'عالمی معیاری یونٹس کے ساتھ خودکار استخراج کے لیے اپنی سی بی سی رپورٹ پی ڈی ایف یا تصویر کے طور پر اپلوڈ کریں'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -239,11 +256,11 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
           {isProcessing ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {language === 'en' ? 'Processing...' : 'پروسیسنگ...'}
+              {language === 'en' ? 'Processing with World Standards...' : 'عالمی معیارات کے ساتھ پروسیسنگ...'}
             </>
           ) : (
             <>
-              {language === 'en' ? 'Extract CBC Data' : 'سی بی سی ڈیٹا نکالیں'}
+              {language === 'en' ? 'Extract CBC Data (World Standard)' : 'سی بی سی ڈیٹا نکالیں (عالمی معیار)'}
             </>
           )}
         </Button>

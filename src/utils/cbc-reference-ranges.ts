@@ -1,6 +1,6 @@
 
 // Reference ranges based on WHO, NIH, and ASH guidelines
-// These are generalized and would need to be adjusted based on age, gender, and specific lab standards
+// Updated to match world standard exponential notation
 
 interface ReferenceRange {
   male: {
@@ -13,43 +13,54 @@ interface ReferenceRange {
   };
 }
 
+// World standard reference ranges with proper exponential notation
 export const CBC_REFERENCE_RANGES: Record<string, ReferenceRange> = {
+  // WBC count in 10³/µL (thousands per microliter) - World Standard
   wbc: {
     male: { min: 4.5, max: 11.0 },
     female: { min: 4.5, max: 11.0 }
   },
+  // RBC count in 10⁶/µL (millions per microliter) - World Standard  
   rbc: {
     male: { min: 4.5, max: 5.9 },
     female: { min: 4.0, max: 5.2 }
   },
+  // Hemoglobin in g/dL - World Standard
   hemoglobin: {
     male: { min: 13.5, max: 17.5 },
     female: { min: 12.0, max: 15.5 }
   },
+  // Hematocrit in % - World Standard
   hematocrit: {
     male: { min: 41.0, max: 50.0 },
     female: { min: 36.0, max: 46.0 }
   },
+  // MCV in fL - World Standard
   mcv: {
     male: { min: 80.0, max: 100.0 },
     female: { min: 80.0, max: 100.0 }
   },
+  // MCH in pg - World Standard
   mch: {
     male: { min: 27.0, max: 33.0 },
     female: { min: 27.0, max: 33.0 }
   },
+  // MCHC in g/dL - World Standard
   mchc: {
     male: { min: 32.0, max: 36.0 },
     female: { min: 32.0, max: 36.0 }
   },
+  // RDW in % - World Standard
   rdw: {
     male: { min: 11.5, max: 14.5 },
     female: { min: 11.5, max: 14.5 }
   },
+  // Platelet count in 10³/µL (thousands per microliter) - World Standard
   platelets: {
     male: { min: 150.0, max: 450.0 },
     female: { min: 150.0, max: 450.0 }
   },
+  // Differential counts in % - World Standard
   neutrophils: {
     male: { min: 40.0, max: 70.0 },
     female: { min: 40.0, max: 70.0 }
@@ -86,20 +97,17 @@ export const adjustReferenceRangeByAge = (
   parameterId: string, 
   age: number
 ): { min: number, max: number } => {
-  // Clone the original range to avoid modifying the reference
   const adjustedRange = { ...range };
   
-  // Apply age-specific adjustments
   if (age < 18) {
-    // Adjustments for children and adolescents
     switch (parameterId) {
       case 'wbc':
-        // Children typically have higher WBC counts
+        // Children typically have higher WBC counts (10³/µL)
         adjustedRange.min = 5.0;
         adjustedRange.max = 15.0;
         break;
       case 'hemoglobin':
-        // Adjust hemoglobin for children
+        // Adjust hemoglobin for children (g/dL)
         if (age < 6) {
           adjustedRange.min -= 1;
           adjustedRange.max -= 1;
@@ -107,14 +115,13 @@ export const adjustReferenceRangeByAge = (
         break;
     }
   } else if (age > 65) {
-    // Adjustments for elderly
     switch (parameterId) {
       case 'hemoglobin':
-        // Slightly lower hemoglobin may be normal in elderly
+        // Slightly lower hemoglobin may be normal in elderly (g/dL)
         adjustedRange.min -= 0.5;
         break;
       case 'lymphocytes':
-        // Lymphocyte percentages may be lower in elderly
+        // Lymphocyte percentages may be lower in elderly (%)
         adjustedRange.min -= 2.0;
         break;
     }

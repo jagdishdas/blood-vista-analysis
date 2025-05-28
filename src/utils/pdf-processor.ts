@@ -1,11 +1,13 @@
-
 import { createWorker, PSM, OEM } from 'tesseract.js';
 import { OCRResult, ExtractedCBCData, CBCParameter, CBCFormData } from '@/types/cbc.types';
 import { pdfjs } from 'react-pdf';
 import { preprocessImageForOCR, enhanceOCRText, extractMedicalValues } from './ocr-enhancer';
 
-// Initialize PDF.js with a direct path to the worker
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Initialize PDF.js with a more reliable worker configuration
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.js',
+  import.meta.url,
+).toString();
 
 // Create an enhanced Tesseract worker for better OCR
 const createOCRWorker = async () => {
@@ -151,18 +153,28 @@ export const processImage = async (imageDataUrl: string): Promise<OCRResult> => 
   }
 };
 
-// Enhanced PDF to image conversion
+// Enhanced PDF to image conversion with better error handling
 const convertPdfPageToImage = async (pdfData: ArrayBuffer): Promise<string> => {
   try {
     console.log('Converting PDF to image...');
-    const loadingTask = pdfjs.getDocument({ data: pdfData });
+    
+    // Create a more reliable loading task with proper error handling
+    const loadingTask = pdfjs.getDocument({
+      data: pdfData,
+      cMapUrl: 'https://unpkg.com/pdfjs-dist@latest/cmaps/',
+      cMapPacked: true,
+      verbosity: 0 // Reduce verbosity to avoid console spam
+    });
+    
+    console.log('Loading PDF document...');
     const pdf = await loadingTask.promise;
-    console.log('PDF loaded, pages:', pdf.numPages);
+    console.log('PDF loaded successfully, pages:', pdf.numPages);
     
     const page = await pdf.getPage(1);
+    console.log('Got first page');
     
     // Higher scale for better OCR accuracy
-    const viewport = page.getViewport({ scale: 4.0 });
+    const viewport = page.getViewport({ scale: 3.0 });
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
     
@@ -171,7 +183,7 @@ const convertPdfPageToImage = async (pdfData: ArrayBuffer): Promise<string> => {
     canvas.height = viewport.height;
     canvas.width = viewport.width;
     
-    console.log('Rendering PDF page...');
+    console.log('Rendering PDF page with dimensions:', canvas.width, 'x', canvas.height);
     await page.render({
       canvasContext: context,
       viewport: viewport
@@ -193,12 +205,16 @@ export const processPDF = async (file: File): Promise<OCRResult> => {
     const arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as ArrayBuffer);
-      reader.onerror = reject;
+      reader.onerror = (error) => {
+        console.error('FileReader error:', error);
+        reject(new Error('Failed to read PDF file'));
+      };
       reader.readAsArrayBuffer(file);
     });
     
-    console.log('PDF file read as ArrayBuffer');
+    console.log('PDF file read as ArrayBuffer, size:', arrayBuffer.byteLength);
     const imageDataUrl = await convertPdfPageToImage(arrayBuffer);
+    console.log('PDF converted to image successfully');
     return await processImage(imageDataUrl);
   } catch (error) {
     console.error('Error processing PDF:', error);

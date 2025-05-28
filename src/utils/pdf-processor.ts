@@ -12,8 +12,8 @@ const createOCRWorker = async () => {
   const worker = await createWorker('eng');
   await worker.setParameters({
     tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-+:%/ ×³⁶µ',
-    tessedit_pageseg_mode: PSM.UNIFORM_BLOCK, // Use PSM enum instead of string
-    tessedit_ocr_engine_mode: OEM.LSTM_ONLY, // Use OEM enum instead of string
+    tessedit_pageseg_mode: PSM.SINGLE_BLOCK, // Use correct PSM enum value
+    tessedit_ocr_engine_mode: OEM.LSTM_ONLY, // Use OEM enum
   });
   return worker;
 };

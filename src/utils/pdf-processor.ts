@@ -1,5 +1,5 @@
 
-import { createWorker, PSM, OEM } from 'tesseract.js';
+import { createWorker } from 'tesseract.js';
 import { OCRResult, ExtractedCBCData, CBCParameter, CBCFormData } from '@/types/cbc.types';
 import { pdfjs } from 'react-pdf';
 import { preprocessImageForOCR, enhanceOCRText, extractMedicalValues } from './ocr-enhancer';
@@ -9,12 +9,14 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pd
 
 // Create an enhanced Tesseract worker for better OCR
 const createOCRWorker = async () => {
+  console.log('Creating OCR worker...');
   const worker = await createWorker('eng');
   await worker.setParameters({
     tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-+:%/ ×³⁶µ',
-    tessedit_pageseg_mode: PSM.SINGLE_BLOCK, // Use correct PSM enum value
-    tessedit_ocr_engine_mode: OEM.LSTM_ONLY, // Use OEM enum
+    tessedit_pageseg_mode: '6', // Use string value for page segmentation mode
+    tessedit_ocr_engine_mode: '1', // Use string value for LSTM only
   });
+  console.log('OCR worker created and configured');
   return worker;
 };
 
@@ -100,6 +102,8 @@ const normalizeToWorldStandard = (value: string, rawUnit: string, parameterId: s
 // Enhanced image processing for better OCR
 export const processImage = async (imageDataUrl: string): Promise<OCRResult> => {
   try {
+    console.log('Starting image processing...');
+    
     // Create a canvas to preprocess the image
     const img = new Image();
     img.src = imageDataUrl;
@@ -108,6 +112,8 @@ export const processImage = async (imageDataUrl: string): Promise<OCRResult> => 
       img.onload = resolve;
       img.onerror = reject;
     });
+    
+    console.log('Image loaded, dimensions:', img.width, 'x', img.height);
     
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -128,10 +134,12 @@ export const processImage = async (imageDataUrl: string): Promise<OCRResult> => 
     const worker = await createOCRWorker();
     const result = await worker.recognize(enhancedDataUrl);
     console.log('OCR processing complete, confidence:', result.data.confidence);
+    console.log('Raw OCR text length:', result.data.text.length);
     await worker.terminate();
     
     // Enhance the extracted text
     const enhancedText = enhanceOCRText(result.data.text);
+    console.log('Enhanced text length:', enhancedText.length);
     
     return {
       text: enhancedText,
@@ -139,15 +147,18 @@ export const processImage = async (imageDataUrl: string): Promise<OCRResult> => 
     };
   } catch (error) {
     console.error('Error processing image:', error);
-    throw new Error('Failed to process the image');
+    throw new Error(`Failed to process the image: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
 // Enhanced PDF to image conversion
 const convertPdfPageToImage = async (pdfData: ArrayBuffer): Promise<string> => {
   try {
+    console.log('Converting PDF to image...');
     const loadingTask = pdfjs.getDocument({ data: pdfData });
     const pdf = await loadingTask.promise;
+    console.log('PDF loaded, pages:', pdf.numPages);
+    
     const page = await pdf.getPage(1);
     
     // Higher scale for better OCR accuracy
@@ -160,21 +171,25 @@ const convertPdfPageToImage = async (pdfData: ArrayBuffer): Promise<string> => {
     canvas.height = viewport.height;
     canvas.width = viewport.width;
     
+    console.log('Rendering PDF page...');
     await page.render({
       canvasContext: context,
       viewport: viewport
     }).promise;
     
+    console.log('PDF page rendered successfully');
     return canvas.toDataURL('image/png');
   } catch (error) {
     console.error('Error converting PDF to image:', error);
-    throw new Error('Failed to convert PDF to image for OCR processing');
+    throw new Error(`Failed to convert PDF to image: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
 // Process the uploaded PDF file and extract text via OCR
 export const processPDF = async (file: File): Promise<OCRResult> => {
   try {
+    console.log('Processing PDF file:', file.name, file.size, 'bytes');
+    
     const arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as ArrayBuffer);
@@ -182,17 +197,20 @@ export const processPDF = async (file: File): Promise<OCRResult> => {
       reader.readAsArrayBuffer(file);
     });
     
+    console.log('PDF file read as ArrayBuffer');
     const imageDataUrl = await convertPdfPageToImage(arrayBuffer);
     return await processImage(imageDataUrl);
   } catch (error) {
     console.error('Error processing PDF:', error);
-    throw new Error('Failed to process the PDF file. Please ensure it\'s a valid PDF with readable text.');
+    throw new Error(`Failed to process the PDF file: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
 // Process an uploaded image file and extract text via OCR
 export const processImageFile = async (file: File): Promise<OCRResult> => {
   try {
+    console.log('Processing image file:', file.name, file.size, 'bytes');
+    
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
@@ -200,16 +218,18 @@ export const processImageFile = async (file: File): Promise<OCRResult> => {
       reader.readAsDataURL(file);
     });
     
+    console.log('Image file read as DataURL');
     return await processImage(dataUrl);
   } catch (error) {
     console.error('Error processing image file:', error);
-    throw new Error('Failed to process the image file');
+    throw new Error(`Failed to process the image file: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
 // Enhanced CBC data extraction using smart pattern matching
 export const extractCBCData = (ocrText: string): ExtractedCBCData => {
   console.log('Starting enhanced CBC data extraction...');
+  console.log('OCR text to process:', ocrText.substring(0, 1000) + '...');
   
   const extractedData: ExtractedCBCData = {
     parameters: []
@@ -219,22 +239,28 @@ export const extractCBCData = (ocrText: string): ExtractedCBCData => {
   const nameMatch = ocrText.match(/(?:name|patient)\s*:?\s*([^\n\r]+)/i);
   if (nameMatch) {
     const name = nameMatch[1].trim().replace(/[^\w\s]/g, '');
-    if (name.length > 2) extractedData.patientName = name;
+    if (name.length > 2) {
+      extractedData.patientName = name;
+      console.log('Extracted patient name:', name);
+    }
   }
   
   const ageMatch = ocrText.match(/(?:age|years?|yrs?)\s*:?\s*(\d+)/i);
   if (ageMatch) {
     extractedData.patientAge = parseInt(ageMatch[1]);
+    console.log('Extracted patient age:', extractedData.patientAge);
   }
   
   const genderMatch = ocrText.match(/(?:gender|sex)\s*:?\s*(male|female|m|f)\b/i);
   if (genderMatch) {
     const gender = genderMatch[1].toLowerCase();
     extractedData.patientGender = gender.startsWith('f') ? 'female' : 'male';
+    console.log('Extracted patient gender:', extractedData.patientGender);
   }
   
   // Use enhanced medical value extraction
   const medicalValues = extractMedicalValues(ocrText);
+  console.log('Extracted medical values:', medicalValues);
   
   for (const { parameter, value, unit } of medicalValues) {
     const normalized = normalizeToWorldStandard(value, unit, parameter);
@@ -247,7 +273,7 @@ export const extractCBCData = (ocrText: string): ExtractedCBCData => {
     });
   }
   
-  console.log('Enhanced extraction complete:', extractedData);
+  console.log('Enhanced extraction complete:', extractedData.parameters.length, 'parameters found');
   return extractedData;
 };
 
@@ -256,6 +282,8 @@ export const convertToCBCFormData = (
   extractedData: ExtractedCBCData, 
   existingParameters: CBCParameter[]
 ): CBCFormData => {
+  console.log('Converting extracted data to form data...');
+  
   const formData: CBCFormData = {
     patientName: extractedData.patientName || '',
     patientAge: extractedData.patientAge || 0,
@@ -263,17 +291,22 @@ export const convertToCBCFormData = (
     parameters: JSON.parse(JSON.stringify(existingParameters))
   };
   
+  // Update parameters with extracted values
   extractedData.parameters.forEach(extractedParam => {
     const paramIndex = formData.parameters.findIndex(p => p.id === extractedParam.id);
     if (paramIndex !== -1) {
+      console.log(`Updating parameter ${extractedParam.id} with value ${extractedParam.value} ${extractedParam.unit}`);
       formData.parameters[paramIndex] = {
         ...formData.parameters[paramIndex],
         value: extractedParam.value,
         unit: extractedParam.unit,
         referenceRange: extractedParam.referenceRange || formData.parameters[paramIndex].referenceRange
       };
+    } else {
+      console.log(`Parameter ${extractedParam.id} not found in existing parameters`);
     }
   });
   
+  console.log('Form data conversion complete');
   return formData;
 };

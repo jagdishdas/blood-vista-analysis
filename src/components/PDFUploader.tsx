@@ -1,17 +1,19 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Upload, FileCheck, Loader2, FileImage, AlertCircle } from 'lucide-react';
-import { processPDF, processImageFile, extractBloodTestData, convertToBloodTestFormData } from '@/utils/pdf-processor';
+import { processPDF, processImageFile, extractBloodTestData, convertToBloodTestFormData, extractCBCData, convertToCBCFormData } from '@/utils/pdf-processor';
 import { BloodTestParameter, BloodTestFormData } from '@/types/blood-test.types';
+import { CBCParameter, CBCFormData } from '@/types/cbc.types';
 import { toast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PDFUploaderProps {
   language: string;
-  parameters: BloodTestParameter[];
-  onExtracted: (data: BloodTestFormData) => void;
+  parameters: BloodTestParameter[] | CBCParameter[];
+  onExtracted: (data: BloodTestFormData | CBCFormData) => void;
   testType: 'cbc' | 'lipid' | 'glucose' | 'thyroid';
 }
 
@@ -105,26 +107,56 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
       }
       
       console.log(`Starting ${testType} data extraction...`);
-      const extractedData = extractBloodTestData(ocrResult.text, testType);
-      console.log('Extracted blood test data:', extractedData);
       
-      if (extractedData.parameters.length === 0) {
-        setErrorMessage(language === 'en'
-          ? `Could not extract ${testType} parameters from the file. Please try uploading a clearer scan or enter values manually.`
-          : `فائل سے ${testType} پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔`);
+      let extractedData;
+      let formData;
+      
+      if (testType === 'cbc') {
+        // Handle CBC extraction separately
+        extractedData = extractCBCData(ocrResult.text);
+        console.log('Extracted CBC data:', extractedData);
         
-        toast({
-          title: language === 'en' ? 'No Data Found' : 'کوئی ڈیٹا نہیں ملا',
-          description: language === 'en'
+        if (extractedData.parameters.length === 0) {
+          setErrorMessage(language === 'en'
+            ? 'Could not extract CBC parameters from the file. Please try uploading a clearer scan or enter values manually.'
+            : 'فائل سے CBC پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔');
+          
+          toast({
+            title: language === 'en' ? 'No Data Found' : 'کوئی ڈیٹا نہیں ملا',
+            description: language === 'en'
+              ? 'Could not extract CBC parameters from the file. Please try uploading a clearer scan or enter values manually.'
+              : 'فائل سے CBC پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔',
+            variant: 'destructive'
+          });
+          return;
+        }
+        
+        console.log('Converting CBC to form data...');
+        formData = convertToCBCFormData(extractedData, parameters as CBCParameter[]);
+      } else {
+        // Handle other blood test types
+        extractedData = extractBloodTestData(ocrResult.text, testType as 'lipid' | 'glucose' | 'thyroid');
+        console.log('Extracted blood test data:', extractedData);
+        
+        if (extractedData.parameters.length === 0) {
+          setErrorMessage(language === 'en'
             ? `Could not extract ${testType} parameters from the file. Please try uploading a clearer scan or enter values manually.`
-            : `فائل سے ${testType} پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔`,
-          variant: 'destructive'
-        });
-        return;
+            : `فائل سے ${testType} پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔`);
+          
+          toast({
+            title: language === 'en' ? 'No Data Found' : 'کوئی ڈیٹا نہیں ملا',
+            description: language === 'en'
+              ? `Could not extract ${testType} parameters from the file. Please try uploading a clearer scan or enter values manually.`
+              : `فائل سے ${testType} پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔`,
+            variant: 'destructive'
+          });
+          return;
+        }
+        
+        console.log('Converting to form data...');
+        formData = convertToBloodTestFormData(extractedData, parameters as BloodTestParameter[], testType as 'lipid' | 'glucose' | 'thyroid');
       }
       
-      console.log('Converting to form data...');
-      const formData = convertToBloodTestFormData(extractedData, parameters, testType);
       console.log('Form data ready:', formData);
       
       onExtracted(formData);

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,7 +12,7 @@ interface PDFUploaderProps {
   language: string;
   parameters: BloodTestParameter[];
   onExtracted: (data: BloodTestFormData) => void;
-  testType: 'lipid' | 'glucose' | 'thyroid';
+  testType: 'cbc' | 'lipid' | 'glucose' | 'thyroid';
 }
 
 const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploaderProps) => {
@@ -25,6 +24,8 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
 
   const getTestTypeTitle = () => {
     switch (testType) {
+      case 'cbc':
+        return language === 'en' ? 'CBC Report' : 'سی بی سی رپورٹ';
       case 'lipid':
         return language === 'en' ? 'Lipid Profile Report' : 'لپڈ پروفائل رپورٹ';
       case 'glucose':

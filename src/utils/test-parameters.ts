@@ -153,16 +153,28 @@ export const getParametersByTestType = (
   }));
 };
 
-// Add the missing function that BloodTestForm is trying to import
-export const getTestParameters = (testType: 'lipid' | 'glucose' | 'thyroid') => {
+// Updated function to return complete BloodTestParameter objects with default reference ranges
+export const getTestParameters = (testType: 'lipid' | 'glucose' | 'thyroid'): BloodTestParameter[] => {
+  let baseParameters: Omit<BloodTestParameter, 'value' | 'referenceRange'>[];
+  
   switch (testType) {
     case 'lipid':
-      return LIPID_PARAMETERS;
+      baseParameters = LIPID_PARAMETERS;
+      break;
     case 'glucose':
-      return GLUCOSE_PARAMETERS;
+      baseParameters = GLUCOSE_PARAMETERS;
+      break;
     case 'thyroid':
-      return THYROID_PARAMETERS;
+      baseParameters = THYROID_PARAMETERS;
+      break;
     default:
       return [];
   }
+  
+  // Return parameters with default reference ranges (will be updated when gender/age is provided)
+  return baseParameters.map(param => ({
+    ...param,
+    value: '',
+    referenceRange: getBloodTestReferenceRange(testType, param.id, 'male', 25) // Default values
+  }));
 };

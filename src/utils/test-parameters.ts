@@ -152,3 +152,17 @@ export const getParametersByTestType = (
     )
   }));
 };
+
+// Add the missing function that BloodTestForm is trying to import
+export const getTestParameters = (testType: 'lipid' | 'glucose' | 'thyroid') => {
+  switch (testType) {
+    case 'lipid':
+      return LIPID_PARAMETERS;
+    case 'glucose':
+      return GLUCOSE_PARAMETERS;
+    case 'thyroid':
+      return THYROID_PARAMETERS;
+    default:
+      return [];
+  }
+};

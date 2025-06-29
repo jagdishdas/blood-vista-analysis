@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -233,7 +232,8 @@ const CBCForm = ({ language, onSubmit }: CBCFormProps) => {
           <PDFUploader 
             language={language} 
             parameters={formData.parameters} 
-            onExtracted={handleExtractedData} 
+            onExtracted={handleExtractedData}
+            testType="cbc"
           />
         </TabsContent>
         

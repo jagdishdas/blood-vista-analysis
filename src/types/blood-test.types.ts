@@ -54,7 +54,7 @@ export interface ExtractedBloodTestData {
   patientName?: string;
   patientAge?: number;
   patientGender?: 'male' | 'female' | '';
-  testType?: 'cbc' | 'lipid' | 'glucose' | 'thyroid';
+  testType?: 'lipid' | 'glucose' | 'thyroid';
   parameters: {
     id: string;
     value: string;

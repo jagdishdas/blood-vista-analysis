@@ -2,6 +2,7 @@ import { createWorker, PSM, OEM } from 'tesseract.js';
 import { OCRResult, ExtractedCBCData, CBCParameter, CBCFormData } from '@/types/cbc.types';
 import { pdfjs } from 'react-pdf';
 import { preprocessImageForOCR, enhanceOCRText, extractMedicalValues } from './ocr-enhancer';
+import { ExtractedBloodTestData, BloodTestParameter, BloodTestFormData } from '@/types/blood-test.types';
 
 // Initialize PDF.js with a more reliable worker configuration
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -240,6 +241,215 @@ export const processImageFile = async (file: File): Promise<OCRResult> => {
     console.error('Error processing image file:', error);
     throw new Error(`Failed to process the image file: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+};
+
+// Enhanced blood test data extraction using smart pattern matching
+export const extractBloodTestData = (ocrText: string, testType: 'lipid' | 'glucose' | 'thyroid'): ExtractedBloodTestData => {
+  console.log(`Starting enhanced ${testType} data extraction...`);
+  console.log('OCR text to process:', ocrText.substring(0, 1000) + '...');
+  
+  const extractedData: ExtractedBloodTestData = {
+    parameters: []
+  };
+  
+  // Extract patient information with better patterns
+  const nameMatch = ocrText.match(/(?:name|patient)\s*:?\s*([^\n\r]+)/i);
+  if (nameMatch) {
+    const name = nameMatch[1].trim().replace(/[^\w\s]/g, '');
+    if (name.length > 2) {
+      extractedData.patientName = name;
+      console.log('Extracted patient name:', name);
+    }
+  }
+  
+  const ageMatch = ocrText.match(/(?:age|years?|yrs?)\s*:?\s*(\d+)/i);
+  if (ageMatch) {
+    extractedData.patientAge = parseInt(ageMatch[1]);
+    console.log('Extracted patient age:', extractedData.patientAge);
+  }
+  
+  const genderMatch = ocrText.match(/(?:gender|sex)\s*:?\s*(male|female|m|f)\b/i);
+  if (genderMatch) {
+    const gender = genderMatch[1].toLowerCase();
+    extractedData.patientGender = gender.startsWith('f') ? 'female' : 'male';
+    console.log('Extracted patient gender:', extractedData.patientGender);
+  }
+  
+  // Set test type
+  extractedData.testType = testType;
+  
+  // Test-specific parameter extraction
+  const medicalValues = extractMedicalValuesForTest(ocrText, testType);
+  console.log('Extracted medical values:', medicalValues);
+  
+  for (const { parameter, value, unit } of medicalValues) {
+    const normalized = normalizeToInternationalStandard(value, unit, parameter, testType);
+    
+    extractedData.parameters.push({
+      id: parameter,
+      value: normalized.value,
+      unit: normalized.unit,
+      referenceRange: undefined // Will be set from reference ranges
+    });
+  }
+  
+  console.log('Enhanced extraction complete:', extractedData.parameters.length, 'parameters found');
+  return extractedData;
+};
+
+// Test-specific medical value extraction
+const extractMedicalValuesForTest = (text: string, testType: 'lipid' | 'glucose' | 'thyroid'): Array<{ parameter: string; value: string; unit: string }> => {
+  const results: Array<{ parameter: string; value: string; unit: string }> = [];
+  
+  const patterns = {
+    lipid: {
+      totalCholesterol: /(?:total\s*cholesterol|cholesterol\s*total|total\s*chol)\s*:?\s*([\d.]+)\s*(mg\/dl|mmol\/l|mg%)/gi,
+      ldlCholesterol: /(?:ldl|low\s*density\s*lipoprotein|ldl\s*cholesterol)\s*:?\s*([\d.]+)\s*(mg\/dl|mmol\/l|mg%)/gi,
+      hdlCholesterol: /(?:hdl|high\s*density\s*lipoprotein|hdl\s*cholesterol)\s*:?\s*([\d.]+)\s*(mg\/dl|mmol\/l|mg%)/gi,
+      triglycerides: /(?:triglycerides?|tg|trigs?)\s*:?\s*([\d.]+)\s*(mg\/dl|mmol\/l|mg%)/gi
+    },
+    glucose: {
+      fastingGlucose: /(?:fasting\s*glucose|glucose\s*fasting|fbg|fbs)\s*:?\s*([\d.]+)\s*(mg\/dl|mmol\/l|mg%)/gi,
+      randomGlucose: /(?:random\s*glucose|glucose\s*random|rbs|rbg)\s*:?\s*([\d.]+)\s*(mg\/dl|mmol\/l|mg%)/gi,
+      hba1c: /(?:hba1c|hb\s*a1c|glycated\s*hemoglobin|hemoglobin\s*a1c)\s*:?\s*([\d.]+)\s*(%|mmol\/mol)/gi
+    },
+    thyroid: {
+      tsh: /(?:tsh|thyroid\s*stimulating\s*hormone)\s*:?\s*([\d.]+)\s*(miu\/l|uiu\/ml|mlu\/l)/gi,
+      freeT4: /(?:free\s*t4|ft4|free\s*thyroxine)\s*:?\s*([\d.]+)\s*(ng\/dl|pmol\/l|pg\/ml)/gi,
+      freeT3: /(?:free\s*t3|ft3|free\s*triiodothyronine)\s*:?\s*([\d.]+)\s*(ng\/dl|pmol\/l|pg\/ml)/gi,
+      totalT4: /(?:total\s*t4|t4\s*total|thyroxine\s*total)\s*:?\s*([\d.]+)\s*(ug\/dl|nmol\/l|mcg\/dl)/gi,
+      totalT3: /(?:total\s*t3|t3\s*total|triiodothyronine\s*total)\s*:?\s*([\d.]+)\s*(ng\/dl|nmol\/l|ng\/ml)/gi
+    }
+  };
+  
+  const testPatterns = patterns[testType];
+  
+  for (const [parameter, pattern] of Object.entries(testPatterns)) {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      results.push({
+        parameter,
+        value: match[1],
+        unit: match[2].toLowerCase()
+      });
+      console.log(`Found ${parameter}: ${match[1]} ${match[2]}`);
+    }
+  }
+  
+  return results;
+};
+
+// International standard units for different test types
+const INTERNATIONAL_STANDARD_UNITS = {
+  lipid: {
+    totalCholesterol: 'mg/dL',
+    ldlCholesterol: 'mg/dL',
+    hdlCholesterol: 'mg/dL',
+    triglycerides: 'mg/dL'
+  },
+  glucose: {
+    fastingGlucose: 'mg/dL',
+    randomGlucose: 'mg/dL',
+    hba1c: '%'
+  },
+  thyroid: {
+    tsh: 'mIU/L',
+    freeT4: 'ng/dL',
+    freeT3: 'pg/mL',
+    totalT4: 'μg/dL',
+    totalT3: 'ng/dL'
+  }
+};
+
+// Enhanced unit conversion with test-specific handling
+const normalizeToInternationalStandard = (value: string, rawUnit: string, parameterId: string, testType: 'lipid' | 'glucose' | 'thyroid'): { value: string; unit: string } => {
+  console.log(`Normalizing ${parameterId}: value=${value}, rawUnit=${rawUnit}`);
+  
+  const numericValue = parseFloat(value);
+  const standardUnit = INTERNATIONAL_STANDARD_UNITS[testType][parameterId as keyof typeof INTERNATIONAL_STANDARD_UNITS[typeof testType]];
+  
+  if (!standardUnit || isNaN(numericValue)) {
+    return { value, unit: rawUnit };
+  }
+  
+  let convertedValue = numericValue;
+  
+  // Test-specific conversions
+  if (testType === 'lipid') {
+    // Convert mmol/L to mg/dL for lipid parameters
+    if (/mmol\/l/i.test(rawUnit)) {
+      if (parameterId === 'totalCholesterol' || parameterId === 'ldlCholesterol' || parameterId === 'hdlCholesterol') {
+        convertedValue = numericValue * 38.67; // mmol/L to mg/dL for cholesterol
+      } else if (parameterId === 'triglycerides') {
+        convertedValue = numericValue * 88.57; // mmol/L to mg/dL for triglycerides
+      }
+    }
+  } else if (testType === 'glucose') {
+    // Convert mmol/L to mg/dL for glucose
+    if (/mmol\/l/i.test(rawUnit) && (parameterId === 'fastingGlucose' || parameterId === 'randomGlucose')) {
+      convertedValue = numericValue * 18.0; // mmol/L to mg/dL for glucose
+    }
+    // HbA1c conversions
+    if (parameterId === 'hba1c' && /mmol\/mol/i.test(rawUnit)) {
+      convertedValue = (numericValue + 46.7) / 10.929; // mmol/mol to %
+    }
+  } else if (testType === 'thyroid') {
+    // Thyroid hormone conversions
+    if (parameterId === 'freeT4') {
+      if (/pmol\/l/i.test(rawUnit)) {
+        convertedValue = numericValue / 12.87; // pmol/L to ng/dL
+      } else if (/pg\/ml/i.test(rawUnit)) {
+        convertedValue = numericValue / 10; // pg/mL to ng/dL
+      }
+    } else if (parameterId === 'freeT3') {
+      if (/pmol\/l/i.test(rawUnit)) {
+        convertedValue = numericValue / 1.54; // pmol/L to pg/mL
+      } else if (/ng\/dl/i.test(rawUnit)) {
+        convertedValue = numericValue * 10; // ng/dL to pg/mL
+      }
+    }
+  }
+  
+  const finalValue = convertedValue.toFixed(parameterId === 'hba1c' ? 1 : 0);
+  console.log(`Converted ${parameterId}: ${value} ${rawUnit} → ${finalValue} ${standardUnit}`);
+  
+  return { value: finalValue, unit: standardUnit };
+};
+
+// Convert the extracted data to the BloodTestFormData format
+export const convertToBloodTestFormData = (
+  extractedData: ExtractedBloodTestData, 
+  existingParameters: BloodTestParameter[],
+  testType: 'lipid' | 'glucose' | 'thyroid'
+): BloodTestFormData => {
+  console.log('Converting extracted data to blood test form data...');
+  
+  const formData: BloodTestFormData = {
+    patientName: extractedData.patientName || '',
+    patientAge: extractedData.patientAge || 0,
+    patientGender: extractedData.patientGender || '',
+    testType,
+    parameters: JSON.parse(JSON.stringify(existingParameters))
+  };
+  
+  // Update parameters with extracted values
+  extractedData.parameters.forEach(extractedParam => {
+    const paramIndex = formData.parameters.findIndex(p => p.id === extractedParam.id);
+    if (paramIndex !== -1) {
+      console.log(`Updating parameter ${extractedParam.id} with value ${extractedParam.value} ${extractedParam.unit}`);
+      formData.parameters[paramIndex] = {
+        ...formData.parameters[paramIndex],
+        value: extractedParam.value,
+        unit: extractedParam.unit,
+        referenceRange: extractedParam.referenceRange || formData.parameters[paramIndex].referenceRange
+      };
+    } else {
+      console.log(`Parameter ${extractedParam.id} not found in existing parameters`);
+    }
+  });
+  
+  console.log('Blood test form data conversion complete');
+  return formData;
 };
 
 // Enhanced CBC data extraction using smart pattern matching

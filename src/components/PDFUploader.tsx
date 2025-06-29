@@ -3,24 +3,38 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Upload, FileCheck, Loader2, FileImage, AlertCircle } from 'lucide-react';
-import { processPDF, processImageFile, extractCBCData, convertToCBCFormData } from '@/utils/pdf-processor';
-import { CBCParameter, CBCFormData } from '@/types/cbc.types';
+import { processPDF, processImageFile, extractBloodTestData, convertToBloodTestFormData } from '@/utils/pdf-processor';
+import { BloodTestParameter, BloodTestFormData } from '@/types/blood-test.types';
 import { toast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PDFUploaderProps {
   language: string;
-  parameters: CBCParameter[];
-  onExtracted: (data: CBCFormData) => void;
+  parameters: BloodTestParameter[];
+  onExtracted: (data: BloodTestFormData) => void;
+  testType: 'lipid' | 'glucose' | 'thyroid';
 }
 
-const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) => {
+const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploaderProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [fileType, setFileType] = useState<'pdf' | 'image'>('pdf');
   const [activeTab, setActiveTab] = useState<string>('pdf');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const getTestTypeTitle = () => {
+    switch (testType) {
+      case 'lipid':
+        return language === 'en' ? 'Lipid Profile Report' : 'لپڈ پروفائل رپورٹ';
+      case 'glucose':
+        return language === 'en' ? 'Glucose Test Report' : 'گلوکوز ٹیسٹ رپورٹ';
+      case 'thyroid':
+        return language === 'en' ? 'Thyroid Function Test Report' : 'تھائرائیڈ فنکشن ٹیسٹ رپورٹ';
+      default:
+        return language === 'en' ? 'Blood Test Report' : 'خون کے ٹیسٹ کی رپورٹ';
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'pdf' | 'image') => {
     if (e.target.files && e.target.files[0]) {
@@ -29,7 +43,6 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
       
       console.log(`Selected ${type} file:`, selectedFile.name, selectedFile.size, selectedFile.type);
       
-      // Check if the file is of the correct type
       if (type === 'pdf' && !selectedFile.type.includes('pdf')) {
         toast({
           title: language === 'en' ? 'Invalid File Type' : 'غلط فائل کی قسم',
@@ -62,11 +75,10 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
     setErrorMessage(null);
     
     try {
-      console.log(`Processing ${fileType} file: ${file.name}`);
+      console.log(`Processing ${fileType} file: ${file.name} for ${testType} test`);
       
       let ocrResult;
       
-      // Process based on file type
       if (fileType === 'pdf') {
         console.log('Starting PDF processing...');
         ocrResult = await processPDF(file);
@@ -91,27 +103,27 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
         });
       }
       
-      console.log('Starting CBC data extraction...');
-      const extractedData = extractCBCData(ocrResult.text);
-      console.log('Extracted CBC data:', extractedData);
+      console.log(`Starting ${testType} data extraction...`);
+      const extractedData = extractBloodTestData(ocrResult.text, testType);
+      console.log('Extracted blood test data:', extractedData);
       
       if (extractedData.parameters.length === 0) {
         setErrorMessage(language === 'en'
-          ? 'Could not extract CBC parameters from the file. Please try uploading a clearer scan or enter values manually.'
-          : 'فائل سے سی بی سی پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔');
+          ? `Could not extract ${testType} parameters from the file. Please try uploading a clearer scan or enter values manually.`
+          : `فائل سے ${testType} پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔`);
         
         toast({
           title: language === 'en' ? 'No Data Found' : 'کوئی ڈیٹا نہیں ملا',
           description: language === 'en'
-            ? 'Could not extract CBC parameters from the file. Please try uploading a clearer scan or enter values manually.'
-            : 'فائل سے سی بی سی پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔',
+            ? `Could not extract ${testType} parameters from the file. Please try uploading a clearer scan or enter values manually.`
+            : `فائل سے ${testType} پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔`,
           variant: 'destructive'
         });
         return;
       }
       
       console.log('Converting to form data...');
-      const formData = convertToCBCFormData(extractedData, parameters);
+      const formData = convertToBloodTestFormData(extractedData, parameters, testType);
       console.log('Form data ready:', formData);
       
       onExtracted(formData);
@@ -119,8 +131,8 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
       toast({
         title: language === 'en' ? 'Report Processed Successfully' : 'رپورٹ کامیابی سے پروسیس کی گئی',
         description: language === 'en'
-          ? `Extracted ${extractedData.parameters.length} parameters with world standard units. Please verify the values before analysis.`
-          : `${extractedData.parameters.length} پیرامیٹرز عالمی معیاری یونٹس کے ساتھ نکالے گئے۔ براہ کرم تجزیہ سے پہلے قدروں کی تصدیق کریں۔`,
+          ? `Extracted ${extractedData.parameters.length} parameters with international standard units. Please verify the values before analysis.`
+          : `${extractedData.parameters.length} پیرامیٹرز بین الاقوامی معیاری یونٹس کے ساتھ نکالے گئے۔ براہ کرم تجزیہ سے پہلے قدروں کی تصدیق کریں۔`,
         variant: 'default'
       });
       
@@ -146,12 +158,12 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
     <Card className="w-full">
       <CardHeader>
         <CardTitle>
-          {language === 'en' ? 'Upload CBC Report' : 'سی بی سی رپورٹ اپلوڈ کریں'}
+          {language === 'en' ? `Upload ${getTestTypeTitle()}` : `${getTestTypeTitle()} اپلوڈ کریں`}
         </CardTitle>
         <CardDescription>
           {language === 'en' 
-            ? 'Upload your CBC report as PDF or image for automatic extraction with world standard units' 
-            : 'عالمی معیاری یونٹس کے ساتھ خودکار استخراج کے لیے اپنی سی بی سی رپورٹ پی ڈی ایف یا تصویر کے طور پر اپلوڈ کریں'}
+            ? `Upload your ${testType} test report as PDF or image for automatic extraction with international standard units` 
+            : `بین الاقوامی معیاری یونٹس کے ساتھ خودکار استخراج کے لیے اپنی ${testType} ٹیسٹ رپورٹ پی ڈی ایف یا تصویر کے طور پر اپلوڈ کریں`}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -210,8 +222,8 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
                       <FileImage className="h-10 w-10 text-gray-400 mb-2" />
                       <p className="text-sm text-gray-500">
                         {language === 'en' 
-                          ? 'Upload CBC report image' 
-                          : 'سی بی سی رپورٹ کی تصویر اپلوڈ کریں'}
+                          ? `Upload ${testType} test report image` 
+                          : `${testType} ٹیسٹ رپورٹ کی تصویر اپلوڈ کریں`}
                       </p>
                       <p className="text-xs text-gray-400 mt-1">JPG, PNG (MAX. 10MB)</p>
                     </>
@@ -256,11 +268,11 @@ const PDFUploader = ({ language, parameters, onExtracted }: PDFUploaderProps) =>
           {isProcessing ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {language === 'en' ? 'Processing with World Standards...' : 'عالمی معیارات کے ساتھ پروسیسنگ...'}
+              {language === 'en' ? 'Processing with International Standards...' : 'بین الاقوامی معیارات کے ساتھ پروسیسنگ...'}
             </>
           ) : (
             <>
-              {language === 'en' ? 'Extract CBC Data (World Standard)' : 'سی بی سی ڈیٹا نکالیں (عالمی معیار)'}
+              {language === 'en' ? `Extract ${testType.toUpperCase()} Data (International Standard)` : `${testType.toUpperCase()} ڈیٹا نکالیں (بین الاقوامی معیار)`}
             </>
           )}
         </Button>

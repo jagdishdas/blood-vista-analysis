@@ -6,6 +6,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CBCForm from "@/components/CBCForm";
 import CBCResults from "@/components/CBCResults";
+import BloodTestForm from "@/components/BloodTestForm";
+import BloodTestResults from "@/components/BloodTestResults";
 import TestCategorySelector from "@/components/TestCategorySelector";
 import { analyzeCBC } from "@/utils/cbc-analyzer";
 import { analyzeBloodTest } from "@/utils/blood-test-analyzer";
@@ -77,6 +79,32 @@ const Index = () => {
     setAnalysis(null); // Clear previous analysis when switching categories
   };
 
+  const renderTestForm = () => {
+    switch (selectedTestCategory) {
+      case 'cbc':
+        return <CBCForm language={language} onSubmit={handleCBCFormSubmit} />;
+      case 'lipid':
+        return <BloodTestForm language={language} testType="lipid" onSubmit={handleBloodTestFormSubmit} />;
+      case 'glucose':
+        return <BloodTestForm language={language} testType="glucose" onSubmit={handleBloodTestFormSubmit} />;
+      case 'thyroid':
+        return <BloodTestForm language={language} testType="thyroid" onSubmit={handleBloodTestFormSubmit} />;
+      default:
+        return <CBCForm language={language} onSubmit={handleCBCFormSubmit} />;
+    }
+  };
+
+  const renderResults = () => {
+    if (!analysis) return null;
+    
+    // Check if it's CBC analysis (has cbcCategory) or blood test analysis (has testType)
+    if (analysis.cbcCategory) {
+      return <CBCResults analysis={analysis} language={language} />;
+    } else {
+      return <BloodTestResults analysis={analysis} language={language} />;
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header language={language} setLanguage={setLanguage} />
@@ -102,25 +130,13 @@ const Index = () => {
             onCategorySelect={handleCategorySelect}
           />
           
-          {selectedTestCategory === 'cbc' ? (
-            <CBCForm language={language} onSubmit={handleCBCFormSubmit} />
-          ) : (
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-              <div className="text-center py-12">
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                  {language === "en" ? "Coming Soon!" : "جلد آ رہا ہے!"}
-                </h3>
-                <p className="text-gray-600">
-                  {language === "en" 
-                    ? `${selectedTestCategory.charAt(0).toUpperCase() + selectedTestCategory.slice(1)} test analysis is being developed. Please use CBC for now.`
-                    : `${selectedTestCategory} ٹیسٹ کا تجزیہ تیار کیا جا رہا ہے۔ براہ کرم ابھی کے لیے سی بی سی استعمال کریں۔`
-                  }
-                </p>
-              </div>
+          {renderTestForm()}
+          
+          {analysis && (
+            <div id="results-section" className="mt-8">
+              {renderResults()}
             </div>
           )}
-          
-          {analysis && <div id="results-section"><CBCResults analysis={analysis} language={language} /></div>}
         </div>
       </main>
       

@@ -3,7 +3,21 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TEST_CATEGORIES } from '@/utils/test-categories';
-import { Activity, Heart, TrendingUp, Thermometer } from 'lucide-react';
+import { 
+  Activity, 
+  Heart, 
+  TrendingUp, 
+  Thermometer,
+  Shield,
+  Droplets,
+  HeartPulse,
+  Flame,
+  Zap,
+  Sun,
+  User,
+  Target,
+  ShieldCheck
+} from 'lucide-react';
 
 interface TestCategorySelectorProps {
   language: string;
@@ -16,7 +30,16 @@ const TestCategorySelector = ({ language, selectedCategory, onCategorySelect }: 
     activity: Activity,
     heart: Heart,
     'trending-up': TrendingUp,
-    thermometer: Thermometer
+    thermometer: Thermometer,
+    shield: Shield,
+    droplets: Droplets,
+    'heart-pulse': HeartPulse,
+    flame: Flame,
+    zap: Zap,
+    sun: Sun,
+    user: User,
+    target: Target,
+    'shield-check': ShieldCheck
   };
 
   return (
@@ -29,6 +52,9 @@ const TestCategorySelector = ({ language, selectedCategory, onCategorySelect }: 
         {TEST_CATEGORIES.map((category) => {
           const IconComponent = iconMap[category.icon as keyof typeof iconMap];
           const isSelected = selectedCategory === category.id;
+          
+          // Fallback to Activity icon if the specific icon is not found
+          const FinalIconComponent = IconComponent || Activity;
           
           return (
             <Card 
@@ -43,7 +69,7 @@ const TestCategorySelector = ({ language, selectedCategory, onCategorySelect }: 
               <CardContent className="p-6">
                 <div className="flex flex-col items-center text-center space-y-3">
                   <div className={`w-12 h-12 rounded-full ${category.color} flex items-center justify-center`}>
-                    <IconComponent className="w-6 h-6 text-white" />
+                    <FinalIconComponent className="w-6 h-6 text-white" />
                   </div>
                   
                   <div>

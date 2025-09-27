@@ -14,7 +14,7 @@ interface PDFUploaderProps {
   language: string;
   parameters: BloodTestParameter[] | CBCParameter[];
   onExtracted: (data: BloodTestFormData | CBCFormData) => void;
-  testType: 'cbc' | 'lipid' | 'glucose' | 'thyroid';
+  testType: 'cbc' | 'lipid' | 'glucose' | 'thyroid' | 'liver' | 'kidney' | 'cardiac' | 'inflammatory' | 'electrolytes' | 'vitamins' | 'hormonal' | 'tumor' | 'autoimmune' | 'coagulation';
 }
 
 const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploaderProps) => {
@@ -34,6 +34,26 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
         return language === 'en' ? 'Glucose Test Report' : 'گلوکوز ٹیسٹ رپورٹ';
       case 'thyroid':
         return language === 'en' ? 'Thyroid Function Test Report' : 'تھائرائیڈ فنکشن ٹیسٹ رپورٹ';
+      case 'liver':
+        return language === 'en' ? 'Liver Function Test Report' : 'جگر کے فنکشن ٹیسٹ رپورٹ';
+      case 'kidney':
+        return language === 'en' ? 'Kidney Function Test Report' : 'گردے کے فنکشن ٹیسٹ رپورٹ';
+      case 'cardiac':
+        return language === 'en' ? 'Cardiac Markers Report' : 'دل کے مارکرز رپورٹ';
+      case 'inflammatory':
+        return language === 'en' ? 'Inflammatory Markers Report' : 'سوزش کے مارکرز رپورٹ';
+      case 'electrolytes':
+        return language === 'en' ? 'Electrolytes & Minerals Report' : 'الیکٹرولائٹس اور معدنیات رپورٹ';
+      case 'vitamins':
+        return language === 'en' ? 'Vitamins & Deficiencies Report' : 'وٹامنز اور کمی رپورٹ';
+      case 'hormonal':
+        return language === 'en' ? 'Hormonal Tests Report' : 'ہارمونل ٹیسٹس رپورٹ';
+      case 'tumor':
+        return language === 'en' ? 'Tumor Markers Report' : 'ٹیومر مارکرز رپورٹ';
+      case 'autoimmune':
+        return language === 'en' ? 'Autoimmune Markers Report' : 'خود کار قوت مدافعت کے مارکرز رپورٹ';
+      case 'coagulation':
+        return language === 'en' ? 'Coagulation Studies Report' : 'خون کے جمنے کے مطالعات کی رپورٹ';
       default:
         return language === 'en' ? 'Blood Test Report' : 'خون کے ٹیسٹ کی رپورٹ';
     }

@@ -89,6 +89,26 @@ const Index = () => {
         return <BloodTestForm language={language} testType="glucose" onSubmit={handleBloodTestFormSubmit} />;
       case 'thyroid':
         return <BloodTestForm language={language} testType="thyroid" onSubmit={handleBloodTestFormSubmit} />;
+      case 'liver':
+        return <BloodTestForm language={language} testType="liver" onSubmit={handleBloodTestFormSubmit} />;
+      case 'kidney':
+        return <BloodTestForm language={language} testType="kidney" onSubmit={handleBloodTestFormSubmit} />;
+      case 'cardiac':
+        return <BloodTestForm language={language} testType="cardiac" onSubmit={handleBloodTestFormSubmit} />;
+      case 'inflammatory':
+        return <BloodTestForm language={language} testType="inflammatory" onSubmit={handleBloodTestFormSubmit} />;
+      case 'electrolytes':
+        return <BloodTestForm language={language} testType="electrolytes" onSubmit={handleBloodTestFormSubmit} />;
+      case 'vitamins':
+        return <BloodTestForm language={language} testType="vitamins" onSubmit={handleBloodTestFormSubmit} />;
+      case 'hormonal':
+        return <BloodTestForm language={language} testType="hormonal" onSubmit={handleBloodTestFormSubmit} />;
+      case 'tumor':
+        return <BloodTestForm language={language} testType="tumor" onSubmit={handleBloodTestFormSubmit} />;
+      case 'autoimmune':
+        return <BloodTestForm language={language} testType="autoimmune" onSubmit={handleBloodTestFormSubmit} />;
+      case 'coagulation':
+        return <BloodTestForm language={language} testType="coagulation" onSubmit={handleBloodTestFormSubmit} />;
       default:
         return <CBCForm language={language} onSubmit={handleCBCFormSubmit} />;
     }

@@ -13,7 +13,7 @@ import PDFUploader from './PDFUploader';
 
 interface BloodTestFormProps {
   language: string;
-  testType: 'lipid' | 'glucose' | 'thyroid';
+  testType: 'lipid' | 'glucose' | 'thyroid' | 'liver' | 'kidney' | 'cardiac' | 'inflammatory' | 'electrolytes' | 'vitamins' | 'hormonal' | 'tumor' | 'autoimmune' | 'coagulation';
   onSubmit: (data: BloodTestFormData) => void;
 }
 
@@ -75,6 +75,26 @@ const BloodTestForm = ({ language, testType, onSubmit }: BloodTestFormProps) => 
         return language === 'en' ? 'Glucose Tests Analysis' : 'گلوکوز ٹیسٹس تجزیہ';
       case 'thyroid':
         return language === 'en' ? 'Thyroid Function Tests' : 'تھائرائیڈ فنکشن ٹیسٹس';
+      case 'liver':
+        return language === 'en' ? 'Liver Function Tests (LFT)' : 'جگر کے فنکشن ٹیسٹس';
+      case 'kidney':
+        return language === 'en' ? 'Kidney Function Tests (KFT)' : 'گردے کے فنکشن ٹیسٹس';
+      case 'cardiac':
+        return language === 'en' ? 'Cardiac Markers Analysis' : 'دل کے مارکرز کا تجزیہ';
+      case 'inflammatory':
+        return language === 'en' ? 'Inflammatory Markers' : 'سوزش کے مارکرز';
+      case 'electrolytes':
+        return language === 'en' ? 'Electrolytes & Minerals' : 'الیکٹرولائٹس اور معدنیات';
+      case 'vitamins':
+        return language === 'en' ? 'Vitamins & Deficiencies' : 'وٹامنز اور کمی';
+      case 'hormonal':
+        return language === 'en' ? 'Hormonal Tests Analysis' : 'ہارمونل ٹیسٹس کا تجزیہ';
+      case 'tumor':
+        return language === 'en' ? 'Tumor Markers Analysis' : 'ٹیومر مارکرز کا تجزیہ';
+      case 'autoimmune':
+        return language === 'en' ? 'Autoimmune Markers' : 'خود کار قوت مدافعت کے مارکرز';
+      case 'coagulation':
+        return language === 'en' ? 'Coagulation Studies' : 'خون کے جمنے کے مطالعات';
       default:
         return language === 'en' ? 'Blood Test Analysis' : 'خون کا ٹیسٹ تجزیہ';
     }

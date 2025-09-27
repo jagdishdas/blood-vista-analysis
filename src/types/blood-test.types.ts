@@ -17,7 +17,7 @@ export interface BloodTestFormData {
   patientName: string;
   patientAge: number;
   patientGender: 'male' | 'female' | '';
-  testType: 'cbc' | 'lipid' | 'glucose' | 'thyroid';
+  testType: 'cbc' | 'lipid' | 'glucose' | 'thyroid' | 'liver' | 'kidney' | 'cardiac' | 'inflammatory' | 'electrolytes' | 'vitamins' | 'hormonal' | 'tumor' | 'autoimmune' | 'coagulation';
   parameters: BloodTestParameter[];
 }
 
@@ -37,7 +37,7 @@ export interface BloodTestResult {
 }
 
 export interface BloodTestAnalysis {
-  testType: 'cbc' | 'lipid' | 'glucose' | 'thyroid';
+  testType: 'cbc' | 'lipid' | 'glucose' | 'thyroid' | 'liver' | 'kidney' | 'cardiac' | 'inflammatory' | 'electrolytes' | 'vitamins' | 'hormonal' | 'tumor' | 'autoimmune' | 'coagulation';
   summary: {
     en: string;
     ur: string;
@@ -54,7 +54,7 @@ export interface ExtractedBloodTestData {
   patientName?: string;
   patientAge?: number;
   patientGender?: 'male' | 'female' | '';
-  testType?: 'lipid' | 'glucose' | 'thyroid';
+  testType?: 'lipid' | 'glucose' | 'thyroid' | 'liver' | 'kidney' | 'cardiac' | 'inflammatory' | 'electrolytes' | 'vitamins' | 'hormonal' | 'tumor' | 'autoimmune' | 'coagulation';
   parameters: {
     id: string;
     value: string;
@@ -68,7 +68,7 @@ export interface ExtractedBloodTestData {
 
 // Test type definitions
 export type TestCategory = {
-  id: 'cbc' | 'lipid' | 'glucose' | 'thyroid';
+  id: 'cbc' | 'lipid' | 'glucose' | 'thyroid' | 'liver' | 'kidney' | 'cardiac' | 'inflammatory' | 'electrolytes' | 'vitamins' | 'hormonal' | 'tumor' | 'autoimmune' | 'coagulation';
   nameEn: string;
   nameUr: string;
   description: {

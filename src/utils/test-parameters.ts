@@ -651,4 +651,3 @@ export const getTestParameters = (testType: 'lipid' | 'glucose' | 'thyroid' | 'l
     referenceRange: getBloodTestReferenceRange(testType, param.id, 'male', 25) // Default values
   }));
 };
-};

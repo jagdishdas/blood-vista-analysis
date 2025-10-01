@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,24 +18,42 @@ interface BloodTestFormProps {
 }
 
 const BloodTestForm = ({ language, testType, onSubmit }: BloodTestFormProps) => {
-  const [parameters, setParameters] = useState<BloodTestParameter[]>(
-    getTestParameters(testType).map(param => ({
-      ...param,
-      value: ''
-    }))
-  );
-  
   const { register, handleSubmit, setValue, watch } = useForm<BloodTestFormData>({
     defaultValues: {
       patientName: '',
-      patientAge: 0,
-      patientGender: '',
+      patientAge: 30,
+      patientGender: 'male',
       testType,
-      parameters
+      parameters: []
     }
   });
 
   const watchedValues = watch();
+  const patientGender = watch('patientGender') || 'male';
+  const patientAge = watch('patientAge') || 30;
+  
+  // Initialize parameters with default gender and age, then update based on form values
+  const [parameters, setParameters] = useState<BloodTestParameter[]>(() => 
+    getTestParameters(testType, 'male', 30).map(param => ({
+      ...param,
+      value: ''
+    }))
+  );
+
+  // Update parameters when gender, age, or test type changes to reflect accurate reference ranges
+  useEffect(() => {
+    const gender = (patientGender || 'male') as 'male' | 'female';
+    const age = patientAge || 30;
+    const newParameters = getTestParameters(testType, gender, age);
+    
+    // Preserve existing values when updating parameters
+    setParameters(prevParams => 
+      newParameters.map(newParam => {
+        const existingParam = prevParams.find(p => p.id === newParam.id);
+        return existingParam ? { ...newParam, value: existingParam.value } : { ...newParam, value: '' };
+      })
+    );
+  }, [testType, patientGender, patientAge]);
 
   const handleParameterChange = (parameterId: string, value: string) => {
     const updatedParameters = parameters.map(param =>

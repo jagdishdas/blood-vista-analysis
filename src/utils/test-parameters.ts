@@ -570,9 +570,15 @@ export const getParametersByTestType = (
 };
 
 // Updated function to return complete BloodTestParameter objects with default reference ranges
-export const getTestParameters = (testType: 'lipid' | 'glucose' | 'thyroid' | 'liver' | 'kidney' | 'cardiac' | 'inflammatory' | 'electrolytes' | 'vitamins' | 'hormonal' | 'tumor' | 'autoimmune' | 'coagulation'): BloodTestParameter[] => {
+// Reference: International medical standards (Mayo Clinic, ABIM, KDIGO 2024, ATA 2024)
+export const getTestParameters = (
+  testType: 'lipid' | 'glucose' | 'thyroid' | 'liver' | 'kidney' | 'cardiac' | 'inflammatory' | 'electrolytes' | 'vitamins' | 'hormonal' | 'tumor' | 'autoimmune' | 'coagulation',
+  gender: 'male' | 'female' = 'male',
+  age: number = 30
+): BloodTestParameter[] => {
   let baseParameters: Omit<BloodTestParameter, 'value' | 'referenceRange'>[];
   
+  // Select parameters based on test type
   switch (testType) {
     case 'lipid':
       baseParameters = LIPID_PARAMETERS;
@@ -613,41 +619,14 @@ export const getTestParameters = (testType: 'lipid' | 'glucose' | 'thyroid' | 'l
     case 'coagulation':
       baseParameters = COAGULATION_PARAMETERS;
       break;
-    case 'liver':
-      baseParameters = LIVER_PARAMETERS;
-      break;
-    case 'kidney':
-      baseParameters = KIDNEY_PARAMETERS;
-      break;
-    case 'cardiac':
-      baseParameters = CARDIAC_PARAMETERS;
-      break;
-    case 'inflammatory':
-      baseParameters = INFLAMMATORY_PARAMETERS;
-      break;
-    case 'electrolytes':
-      baseParameters = ELECTROLYTES_PARAMETERS;
-      break;
-    case 'vitamins':
-      baseParameters = VITAMINS_PARAMETERS;
-      break;
-    case 'hormonal':
-      baseParameters = HORMONAL_PARAMETERS;
-      break;
-    case 'tumor':
-      baseParameters = TUMOR_PARAMETERS;
-      break;
-    case 'autoimmune':
-      baseParameters = AUTOIMMUNE_PARAMETERS;
-      break;
-    case 'coagulation':
-      baseParameters = COAGULATION_PARAMETERS;
-      break;
+    default:
+      baseParameters = [];
   }
-  // Return parameters with default reference ranges (will be updated when gender/age is provided)
+  
+  // Return parameters with accurate reference ranges based on gender and age
   return baseParameters.map(param => ({
     ...param,
     value: '',
-    referenceRange: getBloodTestReferenceRange(testType, param.id, 'male', 25) // Default values
+    referenceRange: getBloodTestReferenceRange(testType, param.id, gender, age)
   }));
 };

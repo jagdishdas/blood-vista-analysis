@@ -1,5 +1,7 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import type { User, Session } from '@supabase/supabase-js';
 import { CBCFormData } from "@/types/cbc.types";
 import { BloodTestFormData, BloodTestAnalysis } from "@/types/blood-test.types";
 import Header from "@/components/Header";
@@ -15,10 +17,45 @@ import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/components/ui/use-toast";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [language, setLanguage] = useState<string>("en");
   const [selectedTestCategory, setSelectedTestCategory] = useState<string>("cbc");
   const [analysis, setAnalysis] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Redirect to auth if not logged in
+        if (!session?.user && !loading) {
+          navigate('/auth');
+        }
+        
+        setLoading(false);
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (!session?.user) {
+        navigate('/auth');
+      }
+      
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate, loading]);
 
   const handleCBCFormSubmit = (data: CBCFormData) => {
     try {
@@ -124,6 +161,21 @@ const Index = () => {
       return <BloodTestResults analysis={analysis} language={language} />;
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-medical-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Will redirect in useEffect
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">

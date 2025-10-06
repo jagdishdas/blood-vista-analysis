@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Droplet } from 'lucide-react';
 import type { User, Session } from '@supabase/supabase-js';
 
 const Auth = () => {
@@ -122,17 +122,27 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/5 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            {isSignUp ? 'Create an account' : 'Welcome back'}
-          </CardTitle>
-          <CardDescription className="text-center">
-            {isSignUp 
-              ? 'Sign up to access BloodVista analysis features' 
-              : 'Sign in to continue to BloodVista'}
-          </CardDescription>
-        </CardHeader>
+      <div className="w-full max-w-md space-y-4">
+        <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </Link>
+        
+        <Card className="w-full shadow-lg">
+          <CardHeader className="space-y-3 text-center">
+            <div className="mx-auto flex items-center justify-center gap-2 text-primary">
+              <Droplet className="h-8 w-8" />
+              <span className="text-2xl font-bold">BloodVista</span>
+            </div>
+            <CardTitle className="text-2xl font-bold">
+              {isSignUp ? 'Create an account' : 'Welcome back'}
+            </CardTitle>
+            <CardDescription>
+              {isSignUp 
+                ? 'Sign up to access comprehensive blood test analysis and health insights' 
+                : 'Sign in to continue your health journey with BloodVista'}
+            </CardDescription>
+          </CardHeader>
         <CardContent className="space-y-4">
           <Button
             variant="outline"
@@ -241,6 +251,7 @@ const Auth = () => {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };

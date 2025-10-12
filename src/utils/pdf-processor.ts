@@ -10,17 +10,57 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url,
 ).toString();
 
-// Create an enhanced Tesseract worker for better OCR
-const createOCRWorker = async () => {
-  console.log('Creating OCR worker...');
-  const worker = await createWorker('eng');
-  await worker.setParameters({
-    tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-+:%/ ×³⁶µ',
-    tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
-    tessedit_ocr_engine_mode: OEM.LSTM_ONLY,
+// Create OCR worker with enhanced settings for medical reports
+const createOCRWorker = async (): Promise<Tesseract.Worker> => {
+  console.log('Creating enhanced OCR worker...');
+  const worker = await createWorker('eng', OEM.LSTM_ONLY, {
+    logger: m => {
+      if (m.status === 'recognizing text') {
+        console.log(`OCR Progress: ${Math.round((m.progress || 0) * 100)}%`);
+      }
+    }
   });
+  
+  // Optimized parameters for medical documents
+  await worker.setParameters({
+    tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,-/:()%×µ³⁶ ',
+    tessedit_pageseg_mode: PSM.AUTO,
+    tessedit_ocr_engine_mode: OEM.LSTM_ONLY,
+    preserve_interword_spaces: '1',
+  });
+  
   console.log('OCR worker created and configured');
   return worker;
+};
+
+// Multi-pass OCR strategy for maximum accuracy
+const performMultiPassOCR = async (imageDataUrl: string): Promise<{text: string, confidence: number}> => {
+  console.log('Starting multi-pass OCR...');
+  const results: Array<{text: string, confidence: number}> = [];
+  
+  // Pass 1: AUTO mode (best for general documents)
+  const worker1 = await createOCRWorker();
+  await worker1.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
+  const result1 = await worker1.recognize(imageDataUrl);
+  results.push({ text: result1.data.text, confidence: result1.data.confidence });
+  await worker1.terminate();
+  console.log('Pass 1 complete (AUTO mode):', result1.data.confidence.toFixed(2) + '%');
+  
+  // Pass 2: SPARSE_TEXT mode (good for tables/forms)
+  const worker2 = await createOCRWorker();
+  await worker2.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
+  const result2 = await worker2.recognize(imageDataUrl);
+  results.push({ text: result2.data.text, confidence: result2.data.confidence });
+  await worker2.terminate();
+  console.log('Pass 2 complete (SPARSE mode):', result2.data.confidence.toFixed(2) + '%');
+  
+  // Return best result by confidence
+  const best = results.reduce((prev, curr) => 
+    curr.confidence > prev.confidence ? curr : prev
+  );
+  
+  console.log(`Multi-pass OCR complete. Selected best: ${best.confidence.toFixed(2)}%`);
+  return best;
 };
 
 // World standard units - exactly matching reference ranges
@@ -102,12 +142,12 @@ const normalizeToWorldStandard = (value: string, rawUnit: string, parameterId: s
   return { value: finalValue, unit: standardUnit };
 };
 
-// Enhanced image processing for better OCR
+// Enhanced image processing with advanced OCR pipeline
 export const processImage = async (imageDataUrl: string): Promise<OCRResult> => {
   try {
-    console.log('Starting image processing...');
+    console.log('Starting advanced image processing pipeline...');
     
-    // Create a canvas to preprocess the image
+    // Load image
     const img = new Image();
     img.src = imageDataUrl;
     
@@ -122,31 +162,30 @@ export const processImage = async (imageDataUrl: string): Promise<OCRResult> => 
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Could not create canvas context');
     
-    // Set canvas size with higher resolution for better OCR
-    canvas.width = img.width * 2;
-    canvas.height = img.height * 2;
+    // Set canvas to original size first
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
     
-    // Draw and enhance the image
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    
-    // Preprocess for better OCR
+    // Apply advanced preprocessing
+    console.log('Applying advanced preprocessing...');
     const enhancedCanvas = preprocessImageForOCR(canvas);
-    const enhancedDataUrl = enhancedCanvas.toDataURL('image/png');
+    const enhancedDataUrl = enhancedCanvas.toDataURL('image/png', 1.0);
     
-    console.log('Starting enhanced OCR processing...');
-    const worker = await createOCRWorker();
-    const result = await worker.recognize(enhancedDataUrl);
-    console.log('OCR processing complete, confidence:', result.data.confidence);
-    console.log('Raw OCR text length:', result.data.text.length);
-    await worker.terminate();
+    // Perform multi-pass OCR for best accuracy
+    console.log('Starting multi-pass OCR recognition...');
+    const ocrResult = await performMultiPassOCR(enhancedDataUrl);
     
-    // Enhance the extracted text
-    const enhancedText = enhanceOCRText(result.data.text);
+    console.log('OCR processing complete. Confidence:', ocrResult.confidence.toFixed(2) + '%');
+    console.log('Raw OCR text length:', ocrResult.text.length);
+    
+    // Enhance the extracted text with advanced corrections
+    const enhancedText = enhanceOCRText(ocrResult.text);
     console.log('Enhanced text length:', enhancedText.length);
     
     return {
       text: enhancedText,
-      confidence: result.data.confidence,
+      confidence: ocrResult.confidence,
     };
   } catch (error) {
     console.error('Error processing image:', error);
@@ -154,44 +193,57 @@ export const processImage = async (imageDataUrl: string): Promise<OCRResult> => 
   }
 };
 
-// Enhanced PDF to image conversion with better error handling
+// Convert PDF page to image with maximum quality for OCR
 const convertPdfPageToImage = async (pdfData: ArrayBuffer): Promise<string> => {
   try {
-    console.log('Converting PDF to image...');
+    console.log('Converting PDF to image with high-quality settings...');
     
-    // Create a more reliable loading task with proper error handling
+    // Create loading task with enhanced configuration
     const loadingTask = pdfjs.getDocument({
       data: pdfData,
       cMapUrl: 'https://unpkg.com/pdfjs-dist@latest/cmaps/',
       cMapPacked: true,
-      verbosity: 0 // Reduce verbosity to avoid console spam
+      verbosity: 0, // Reduce console spam
+      standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@latest/standard_fonts/'
     });
     
     console.log('Loading PDF document...');
     const pdf = await loadingTask.promise;
-    console.log('PDF loaded successfully, pages:', pdf.numPages);
+    console.log('PDF loaded successfully. Total pages:', pdf.numPages);
     
     const page = await pdf.getPage(1);
-    console.log('Got first page');
+    console.log('First page loaded');
     
-    // Higher scale for better OCR accuracy
-    const viewport = page.getViewport({ scale: 3.0 });
+    // Maximum scale for OCR accuracy (4x higher resolution)
+    const scale = 4.0;
+    const viewport = page.getViewport({ scale });
+    
     const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
+    const context = canvas.getContext('2d', {
+      alpha: false, // Better performance
+      willReadFrequently: true
+    });
     
     if (!context) throw new Error('Could not create canvas context');
     
     canvas.height = viewport.height;
     canvas.width = viewport.width;
     
-    console.log('Rendering PDF page with dimensions:', canvas.width, 'x', canvas.height);
+    // Fill white background (improves OCR)
+    context.fillStyle = 'white';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
+    console.log(`Rendering PDF page at ${viewport.width}x${viewport.height} (${scale}x scale)`);
+    
     await page.render({
       canvasContext: context,
-      viewport: viewport
+      viewport: viewport,
+      intent: 'print' // Use print quality
     }).promise;
     
-    console.log('PDF page rendered successfully');
-    return canvas.toDataURL('image/png');
+    console.log('PDF page rendered successfully at maximum quality');
+    
+    return canvas.toDataURL('image/png', 1.0); // Maximum quality PNG
   } catch (error) {
     console.error('Error converting PDF to image:', error);
     throw new Error(`Failed to convert PDF to image: ${error instanceof Error ? error.message : 'Unknown error'}`);

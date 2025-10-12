@@ -27,38 +27,37 @@ const Index = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Set up auth state listener
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Redirect to auth if not logged in
+        if (!session?.user && !loading) {
+          navigate('/auth');
+        }
+        
         setLoading(false);
       }
     );
 
-    // Check for existing session
+    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      
+      if (!session?.user) {
+        navigate('/auth');
+      }
+      
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate, loading]);
 
   const handleCBCFormSubmit = (data: CBCFormData) => {
-    if (!user) {
-      toast({
-        title: language === "en" ? "Sign in required" : "سائن ان کی ضرورت ہے",
-        description: language === "en"
-          ? "Please sign in to analyze your blood test results."
-          : "اپنے خون کے ٹیسٹ کے نتائج کا تجزیہ کرنے کے لیے سائن ان کریں۔",
-        variant: "destructive",
-      });
-      navigate('/auth');
-      return;
-    }
-
     try {
       const results = analyzeCBC(data);
       setAnalysis(results);
@@ -86,18 +85,6 @@ const Index = () => {
   };
 
   const handleBloodTestFormSubmit = (data: BloodTestFormData) => {
-    if (!user) {
-      toast({
-        title: language === "en" ? "Sign in required" : "سائن ان کی ضرورت ہے",
-        description: language === "en"
-          ? "Please sign in to analyze your blood test results."
-          : "اپنے خون کے ٹیسٹ کے نتائج کا تجزیہ کرنے کے لیے سائن ان کریں۔",
-        variant: "destructive",
-      });
-      navigate('/auth');
-      return;
-    }
-
     try {
       const results = analyzeBloodTest(data);
       setAnalysis(results);
@@ -184,6 +171,10 @@ const Index = () => {
         </div>
       </div>
     );
+  }
+
+  if (!user) {
+    return null; // Will redirect in useEffect
   }
 
   return (

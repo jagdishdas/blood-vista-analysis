@@ -1,9 +1,9 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Upload, FileCheck, Loader2, FileImage, AlertCircle } from 'lucide-react';
-import { processPDF, processImageFile, extractBloodTestData, convertToBloodTestFormData, extractCBCData, convertToCBCFormData } from '@/utils/pdf-processor';
+import { processPDFWithVision, processImageWithVision } from '@/utils/google-vision-ocr';
+import { extractBloodTestData, convertToBloodTestFormData, extractCBCData, convertToCBCFormData } from '@/utils/pdf-processor';
 import { BloodTestParameter, BloodTestFormData } from '@/types/blood-test.types';
 import { CBCParameter, CBCFormData } from '@/types/cbc.types';
 import { toast } from "@/components/ui/use-toast";
@@ -98,17 +98,18 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
     setErrorMessage(null);
     
     try {
-      console.log(`Processing ${fileType} file: ${file.name} for ${testType} test`);
+      console.log(`Processing ${fileType} file: ${file.name} for ${testType} test using Google Cloud Vision`);
       
       let ocrResult;
       
+      // Use Google Cloud Vision OCR
       if (fileType === 'pdf') {
-        console.log('Starting PDF processing...');
-        ocrResult = await processPDF(file);
+        console.log('Starting PDF processing with Google Vision...');
+        ocrResult = await processPDFWithVision(file);
         console.log('PDF processing completed, confidence:', ocrResult.confidence);
       } else {
-        console.log('Starting image processing...');
-        ocrResult = await processImageFile(file);
+        console.log('Starting image processing with Google Vision...');
+        ocrResult = await processImageWithVision(file);
         console.log('Image processing completed, confidence:', ocrResult.confidence);
       }
       
@@ -132,7 +133,6 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
       let formData;
       
       if (testType === 'cbc') {
-        // Handle CBC extraction separately
         extractedData = extractCBCData(ocrResult.text);
         console.log('Extracted CBC data:', extractedData);
         
@@ -154,7 +154,6 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
         console.log('Converting CBC to form data...');
         formData = convertToCBCFormData(extractedData, parameters as CBCParameter[]);
       } else {
-        // Handle other blood test types
         extractedData = extractBloodTestData(ocrResult.text, testType as 'lipid' | 'glucose' | 'thyroid');
         console.log('Extracted blood test data:', extractedData);
         
@@ -184,22 +183,24 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
       toast({
         title: language === 'en' ? 'Report Processed Successfully' : 'رپورٹ کامیابی سے پروسیس کی گئی',
         description: language === 'en'
-          ? `Extracted ${extractedData.parameters.length} parameters with international standard units. Please verify the values before analysis.`
-          : `${extractedData.parameters.length} پیرامیٹرز بین الاقوامی معیاری یونٹس کے ساتھ نکالے گئے۔ براہ کرم تجزیہ سے پہلے قدروں کی تصدیق کریں۔`,
+          ? `Extracted ${extractedData.parameters.length} parameters with Google Cloud Vision AI. Please verify the values before analysis.`
+          : `${extractedData.parameters.length} پیرامیٹرز گوگل کلاؤڈ ویژن AI کے ساتھ نکالے گئے۔ براہ کرم تجزیہ سے پہلے قدروں کی تصدیق کریں۔`,
         variant: 'default'
       });
       
     } catch (error) {
       console.error('Error processing file:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      
       setErrorMessage(language === 'en'
-        ? 'Failed to process the file. Please try again or enter values manually.'
+        ? `Failed to process the file: ${errorMsg}. Please try again or enter values manually.`
         : 'فائل کو پروسیس کرنے میں ناکام۔ براہ کرم دوبارہ کوشش کریں یا قدریں دستی طور پر درج کریں۔');
       
       toast({
         title: language === 'en' ? 'Processing Error' : 'پروسیسنگ میں خرابی',
         description: language === 'en'
-          ? 'Failed to process the file. Please try again or enter values manually.'
-          : 'فائل کو پروسیس کرنے میں ناکام۔ براہ کرم دوبارہ کوشش کریں یا قدریں دستی طور پر درج کریں۔',
+          ? `Failed to process the file: ${errorMsg}`
+          : 'فائل کو پروسیس کرنے میں ناکام۔ براہ کرم دوبارہ کوشش کریں۔',
         variant: 'destructive'
       });
     } finally {
@@ -215,8 +216,8 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
         </CardTitle>
         <CardDescription>
           {language === 'en' 
-            ? `Upload your ${testType} test report as PDF or image for automatic extraction with international standard units` 
-            : `بین الاقوامی معیاری یونٹس کے ساتھ خودکار استخراج کے لیے اپنی ${testType} ٹیسٹ رپورٹ پی ڈی ایف یا تصویر کے طور پر اپلوڈ کریں`}
+            ? `Upload your ${testType} test report as PDF or image for AI-powered extraction with Google Cloud Vision` 
+            : `گوگل کلاؤڈ ویژن کے ساتھ AI سے چلنے والے استخراج کے لیے اپنی ${testType} ٹیسٹ رپورٹ پی ڈی ایف یا تصویر کے طور پر اپلوڈ کریں`}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -232,23 +233,23 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
           
           <TabsContent value="pdf" className="mt-4">
             <div className="flex flex-col items-center justify-center w-full">
-              <label htmlFor="pdf-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+              <label htmlFor="pdf-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors">
                 <div className="flex flex-col items-center justify-center px-4 py-6 text-center">
                   {!file || fileType !== 'pdf' ? (
                     <>
-                      <Upload className="h-10 w-10 text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-500">
+                      <Upload className="h-10 w-10 text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">
                         {language === 'en' 
                           ? 'Click to upload or drag and drop' 
                           : 'اپلوڈ کرنے کے لیے کلک کریں یا کھینچ کر چھوڑیں'}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">PDF (MAX. 10MB)</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">PDF (MAX. 10MB)</p>
                     </>
                   ) : (
                     <>
                       <FileCheck className="h-10 w-10 text-green-500 mb-2" />
-                      <p className="text-sm text-gray-700 font-medium">{file.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-sm text-foreground font-medium">{file.name}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
                         {(file.size / (1024 * 1024)).toFixed(2)} MB
                       </p>
                     </>
@@ -268,23 +269,23 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
           
           <TabsContent value="image" className="mt-4">
             <div className="flex flex-col items-center justify-center w-full">
-              <label htmlFor="image-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+              <label htmlFor="image-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors">
                 <div className="flex flex-col items-center justify-center px-4 py-6 text-center">
                   {!file || fileType !== 'image' ? (
                     <>
-                      <FileImage className="h-10 w-10 text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-500">
+                      <FileImage className="h-10 w-10 text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">
                         {language === 'en' 
                           ? `Upload ${testType} test report image` 
                           : `${testType} ٹیسٹ رپورٹ کی تصویر اپلوڈ کریں`}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">JPG, PNG (MAX. 10MB)</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">JPG, PNG (MAX. 10MB)</p>
                     </>
                   ) : (
                     <>
                       <FileCheck className="h-10 w-10 text-green-500 mb-2" />
-                      <p className="text-sm text-gray-700 font-medium">{file.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-sm text-foreground font-medium">{file.name}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
                         {(file.size / (1024 * 1024)).toFixed(2)} MB
                       </p>
                     </>
@@ -321,11 +322,11 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
           {isProcessing ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {language === 'en' ? 'Processing with International Standards...' : 'بین الاقوامی معیارات کے ساتھ پروسیسنگ...'}
+              {language === 'en' ? 'Processing with Google Cloud Vision AI...' : 'گوگل کلاؤڈ ویژن AI کے ساتھ پروسیسنگ...'}
             </>
           ) : (
             <>
-              {language === 'en' ? `Extract ${testType.toUpperCase()} Data (International Standard)` : `${testType.toUpperCase()} ڈیٹا نکالیں (بین الاقوامی معیار)`}
+              {language === 'en' ? `Extract ${testType.toUpperCase()} Data (AI Powered)` : `${testType.toUpperCase()} ڈیٹا نکالیں (AI سے چلنے والا)`}
             </>
           )}
         </Button>

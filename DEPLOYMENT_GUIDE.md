@@ -1,6 +1,6 @@
 # BloodVista Deployment Guide
 
-Complete guide for deploying BloodVista to Vercel with your own Supabase backend.
+Complete guide for deploying BloodVista to Vercel or Netlify with your own Supabase backend.
 
 ---
 
@@ -10,9 +10,11 @@ Complete guide for deploying BloodVista to Vercel with your own Supabase backend
 2. [Supabase Setup](#supabase-setup)
 3. [GitHub Repository Setup](#github-repository-setup)
 4. [Vercel Deployment](#vercel-deployment)
-5. [Environment Variables](#environment-variables)
-6. [Post-Deployment Configuration](#post-deployment-configuration)
-7. [Troubleshooting](#troubleshooting)
+5. [Netlify Deployment](#netlify-deployment)
+6. [Environment Variables](#environment-variables)
+7. [Post-Deployment Configuration](#post-deployment-configuration)
+8. [Authentication Troubleshooting](#authentication-troubleshooting)
+9. [General Troubleshooting](#general-troubleshooting)
 
 ---
 
@@ -21,7 +23,7 @@ Complete guide for deploying BloodVista to Vercel with your own Supabase backend
 Before starting, ensure you have:
 
 - [ ] GitHub account
-- [ ] Vercel account (free tier works)
+- [ ] Vercel OR Netlify account (free tier works)
 - [ ] Supabase account (free tier works)
 - [ ] Your project code exported to GitHub
 
@@ -51,6 +53,8 @@ SUPABASE_URL: https://[your-project-id].supabase.co
 SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
+**⚠️ Important**: The `anon` key is safe to expose in frontend code. Never expose the `service_role` key!
+
 ### Step 3: Configure Authentication
 
 1. Go to **Authentication** → **Providers**
@@ -65,60 +69,80 @@ SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 1. Go to [Google Cloud Console](https://console.cloud.google.com)
 2. Create a new project or select existing
 3. Go to **APIs & Services** → **OAuth consent screen**
-4. Configure the consent screen
+4. Configure the consent screen:
+   - User Type: External
+   - App name: BloodVista
+   - Support email: Your email
+   - Developer contact: Your email
 5. Go to **APIs & Services** → **Credentials**
 6. Create **OAuth 2.0 Client ID**:
    - Application type: **Web application**
-   - Authorized JavaScript origins: `https://your-app.vercel.app`
-   - Authorized redirect URIs: `https://[your-project-id].supabase.co/auth/v1/callback`
+   - Name: BloodVista Web Client
+   - Authorized JavaScript origins:
+     - `https://your-app.vercel.app` (or your Netlify URL)
+     - `http://localhost:8080` (for local development)
+   - Authorized redirect URIs:
+     - `https://[your-project-id].supabase.co/auth/v1/callback`
 7. Copy **Client ID** and **Client Secret**
 8. In Supabase, go to **Authentication** → **Providers** → **Google**
 9. Enable Google and paste your credentials
 
-### Step 4: Configure Redirect URLs
+### Step 4: Configure Redirect URLs (CRITICAL!)
 
 1. In Supabase, go to **Authentication** → **URL Configuration**
 2. Set these URLs:
 
 ```
 Site URL: https://your-app.vercel.app
-Redirect URLs:
+
+Redirect URLs (add ALL of these):
   - https://your-app.vercel.app
   - https://your-app.vercel.app/
   - https://your-app.vercel.app/auth
-  - http://localhost:5173 (for local development)
-  - http://localhost:8080 (for local development)
+  - https://your-app.vercel.app/*
+  - http://localhost:8080
+  - http://localhost:8080/
+  - http://localhost:8080/auth
+  - http://localhost:5173
 ```
+
+**⚠️ This is the #1 cause of authentication errors!** Make sure your deployment URL matches exactly.
 
 ---
 
 ## GitHub Repository Setup
 
-### Step 1: Export from Lovable
+### Step 1: Export Your Code
 
-1. In Lovable, go to **Settings** → **GitHub**
-2. Connect your GitHub account
-3. Create a new repository
-
-### Step 2: Clone Locally (Optional)
+1. Download or export your project code to a local folder
+2. Initialize a new Git repository (if not already):
 
 ```bash
-git clone https://github.com/your-username/your-repo.git
-cd your-repo
+cd your-project-folder
+git init
+git add .
+git commit -m "Initial commit"
 ```
 
-### Step 3: Update Environment Variables File
+### Step 2: Push to GitHub
 
-Create a `.env.example` file for reference:
+1. Create a new repository on GitHub
+2. Push your code:
 
-```env
-# Supabase Configuration
-VITE_SUPABASE_URL=https://your-project-id.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key-here
-VITE_SUPABASE_PROJECT_ID=your-project-id
+```bash
+git remote add origin https://github.com/your-username/your-repo.git
+git branch -M main
+git push -u origin main
 ```
 
-**⚠️ Important**: Never commit actual API keys to GitHub. Use `.env.local` for local development.
+### Step 3: Verify Environment Setup
+
+Ensure you have these files in your repository:
+
+- `.env.example` (template for environment variables)
+- `.gitignore` (should include `.env` and `.env.local`)
+
+**⚠️ Important**: Never commit `.env` files with real credentials to GitHub!
 
 ---
 
@@ -168,6 +192,59 @@ In Vercel project settings, add these environment variables:
 
 ---
 
+## Netlify Deployment
+
+### Step 1: Connect to Netlify
+
+1. Go to [https://netlify.com](https://netlify.com)
+2. Sign in with GitHub
+3. Click **"Add new site"** → **"Import an existing project"**
+4. Choose GitHub and select your repository
+
+### Step 2: Configure Build Settings
+
+| Setting | Value |
+|---------|-------|
+| Build Command | `npm run build` |
+| Publish Directory | `dist` |
+
+### Step 3: Add Environment Variables
+
+1. Go to **Site settings** → **Build & deploy** → **Environment**
+2. Click **"Add a variable"** → **"Add single variable"**
+3. Add each variable:
+
+| Key | Value |
+|-----|-------|
+| `VITE_SUPABASE_URL` | `https://[your-project-id].supabase.co` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Your Supabase anon key |
+| `VITE_SUPABASE_PROJECT_ID` | Your Supabase project ID |
+
+### Step 4: Create Redirect Rules
+
+Create a `netlify.toml` file in your project root:
+
+```toml
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+```
+
+This ensures client-side routing works correctly.
+
+### Step 5: Deploy
+
+1. Commit and push the `netlify.toml` file
+2. Netlify will auto-deploy on push
+3. Your app will be live at `https://your-site.netlify.app`
+
+---
+
 ## Environment Variables
 
 ### Complete List
@@ -180,16 +257,19 @@ In Vercel project settings, add these environment variables:
 
 ### Local Development
 
-Create a `.env.local` file in your project root:
+1. Copy the example file:
+```bash
+cp .env.example .env
+```
 
+2. Edit `.env` with your Supabase credentials:
 ```env
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 VITE_SUPABASE_PROJECT_ID=your-project-id
 ```
 
-Then run:
-
+3. Run the development server:
 ```bash
 npm install
 npm run dev
@@ -201,18 +281,19 @@ npm run dev
 
 ### Step 1: Update Supabase Redirect URLs
 
-After deployment, add your actual Vercel URL:
+After deployment, add your actual deployment URL:
 
 1. Go to Supabase → **Authentication** → **URL Configuration**
-2. Update **Site URL** to your Vercel domain
-3. Add the Vercel URL to **Redirect URLs**
+2. Update **Site URL** to your deployment domain (e.g., `https://your-app.vercel.app`)
+3. Add the deployment URL to **Redirect URLs**
 
 ### Step 2: Test Authentication
 
 1. Visit your deployed app
-2. Try signing up with email
-3. Try logging in
-4. Verify Google OAuth works (if configured)
+2. Go to `/auth` page
+3. Try signing up with email
+4. Try logging in
+5. Test Google OAuth (if configured)
 
 ### Step 3: Custom Domain (Optional)
 
@@ -221,43 +302,107 @@ After deployment, add your actual Vercel URL:
 2. Add your custom domain
 3. Configure DNS as instructed
 
+**In Netlify:**
+1. Go to **Domain settings**
+2. Add your custom domain
+3. Configure DNS as instructed
+
 **In Supabase:**
 1. Update Site URL to your custom domain
-2. Update Redirect URLs
+2. Add custom domain to Redirect URLs
 
 ---
 
-## Troubleshooting
+## Authentication Troubleshooting
 
-### Common Issues
+### "requested path is invalid"
 
-#### "Invalid API key" or Auth Errors
+**Cause**: Site URL or Redirect URLs are misconfigured in Supabase.
+
+**Fix**:
+1. Go to Supabase → **Authentication** → **URL Configuration**
+2. Set **Site URL** to your EXACT deployment URL (e.g., `https://your-app.vercel.app`)
+3. Add these to **Redirect URLs**:
+   - `https://your-app.vercel.app`
+   - `https://your-app.vercel.app/`
+   - `https://your-app.vercel.app/auth`
+   - `https://your-app.vercel.app/*`
+
+### Google OAuth "redirect_uri_mismatch"
+
+**Cause**: Google OAuth callback URL doesn't match what's configured.
+
+**Fix**:
+1. Go to Google Cloud Console → APIs & Services → Credentials
+2. Edit your OAuth 2.0 Client ID
+3. Under **Authorized redirect URIs**, add:
+   - `https://[your-supabase-project-id].supabase.co/auth/v1/callback`
+4. Under **Authorized JavaScript origins**, add:
+   - `https://your-app.vercel.app` (your deployment URL)
+   - `http://localhost:8080` (for local testing)
+
+### "Invalid login credentials"
+
+**Cause**: User doesn't exist or password is wrong.
+
+**Fix**:
+1. Make sure you're using the correct email/password
+2. Check if user exists in Supabase → Authentication → Users
+3. If testing, try creating a new account first
+
+### Email confirmation not received
+
+**Cause**: Email confirmations are enabled but email isn't configured.
+
+**Fix** (for testing):
+1. Go to Supabase → Authentication → Settings
+2. Under **Email Auth**, toggle **"Enable email confirmations"** to OFF
+3. This allows instant sign-up without email verification
+
+### Session not persisting after login
+
+**Cause**: Auth state isn't being properly managed.
+
+**Fix**: The app already handles this correctly with `onAuthStateChange`. If still having issues:
+1. Clear browser localStorage and cookies
+2. Try in an incognito window
+3. Check browser console for errors
+
+### Login works but redirects to localhost
+
+**Cause**: `window.location.origin` is being evaluated at the wrong time or redirect URL is hardcoded.
+
+**Fix**: Ensure your Supabase redirect URLs include your production URL, not localhost.
+
+---
+
+## General Troubleshooting
+
+### "Invalid API key" or Auth Errors
 
 - ✅ Verify `VITE_SUPABASE_PUBLISHABLE_KEY` is correct
 - ✅ Check you're using the **anon** key, not the **service_role** key
 - ✅ Redeploy after updating environment variables
+- ✅ Check the key hasn't been regenerated in Supabase
 
-#### Google OAuth "redirect_uri_mismatch"
-
-- ✅ Ensure redirect URI in Google Console matches: `https://[project-id].supabase.co/auth/v1/callback`
-- ✅ Add your Vercel URL to Authorized JavaScript Origins
-
-#### "requested path is invalid"
-
-- ✅ Check Site URL is correctly set in Supabase
-- ✅ Ensure redirect URLs include your app domain
-
-#### Build Fails on Vercel
+### Build Fails on Vercel/Netlify
 
 - ✅ Check all environment variables are set
 - ✅ Verify build command is `npm run build`
-- ✅ Check for TypeScript errors locally first
+- ✅ Check for TypeScript errors: `npx tsc --noEmit`
+- ✅ Ensure all dependencies are in `package.json`
 
-#### App Shows Blank Page
+### App Shows Blank Page
 
-- ✅ Check browser console for errors
+- ✅ Check browser console (F12) for errors
 - ✅ Verify Supabase URL is correct
 - ✅ Ensure environment variables have `VITE_` prefix
+- ✅ Try hard refresh (Ctrl+Shift+R)
+
+### 404 on Page Refresh (Netlify)
+
+- ✅ Ensure `netlify.toml` has redirect rules
+- ✅ The `[[redirects]]` block should redirect all paths to `/index.html`
 
 ### Verifying Environment Variables
 
@@ -265,15 +410,20 @@ In your browser console, you can check if variables are loaded:
 
 ```javascript
 console.log(import.meta.env.VITE_SUPABASE_URL);
+console.log(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
 ```
+
+If these show `undefined`, your environment variables aren't set correctly.
 
 ---
 
 ## Quick Reference Commands
 
 ```bash
-# Local development
+# Install dependencies
 npm install
+
+# Local development
 npm run dev
 
 # Build for production
@@ -284,6 +434,9 @@ npm run preview
 
 # Check for TypeScript errors
 npx tsc --noEmit
+
+# Check for linting errors
+npm run lint
 ```
 
 ---
@@ -292,16 +445,54 @@ npx tsc --noEmit
 
 - [ ] Never commit `.env` files with real credentials
 - [ ] Use environment variables for all sensitive data
-- [ ] Keep service_role key secret (never expose in frontend)
+- [ ] Keep `service_role` key secret (never expose in frontend)
 - [ ] Enable Row Level Security (RLS) on Supabase tables
 - [ ] Set up proper redirect URLs in Supabase
+- [ ] Review Google OAuth scopes (only request what you need)
+
+---
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Your Domain                          │
+│                  (your-app.vercel.app)                      │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Vercel / Netlify                         │
+│                    (Static Hosting)                         │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              React Application (Vite)                │   │
+│  │  - Components, Pages, Routing                       │   │
+│  │  - Tailwind CSS, shadcn/ui                          │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              │ HTTPS API Calls
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                       Supabase                              │
+│              (your-project.supabase.co)                     │
+│                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │     Auth     │  │   Database   │  │   Storage    │      │
+│  │  (Users)     │  │ (PostgreSQL) │  │   (Files)    │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Support Resources
 
 - [Supabase Documentation](https://supabase.com/docs)
+- [Supabase Auth Guide](https://supabase.com/docs/guides/auth)
 - [Vercel Documentation](https://vercel.com/docs)
+- [Netlify Documentation](https://docs.netlify.com)
 - [Vite Documentation](https://vitejs.dev/guide/)
 
 ---

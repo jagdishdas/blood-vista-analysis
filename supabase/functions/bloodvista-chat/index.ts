@@ -41,34 +41,20 @@ Guidelines:
 6. Help users navigate the BloodVista application
 7. Answer questions about blood test reference ranges and what results mean
 
-Important Disclaimer: BloodVista provides educational information only and is not a substitute for professional medical advice. Always consult a healthcare provider for diagnosis and treatment.
-
-When users ask about their specific results, help them understand what the values mean in general terms, but always emphasize consulting a doctor for personalized medical advice.`;
+Important Disclaimer: BloodVista provides educational information only and is not a substitute for professional medical advice. Always consult a healthcare provider for diagnosis and treatment.`;
 
 // Provider configurations
-type AIProvider = 'lovable' | 'openai' | 'gemini' | 'claude';
+type AIProvider = 'openai' | 'gemini' | 'claude';
 
 interface ProviderConfig {
   url: string;
   model: string;
   getHeaders: (apiKey: string) => Record<string, string>;
   formatBody: (messages: any[], stream: boolean) => any;
+  parseResponse: (data: any) => string;
 }
 
 const providerConfigs: Record<AIProvider, ProviderConfig> = {
-  lovable: {
-    url: "https://ai.gateway.lovable.dev/v1/chat/completions",
-    model: "google/gemini-2.5-flash",
-    getHeaders: (apiKey: string) => ({
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    }),
-    formatBody: (messages: any[], stream: boolean) => ({
-      model: "google/gemini-2.5-flash",
-      messages,
-      stream,
-    }),
-  },
   openai: {
     url: "https://api.openai.com/v1/chat/completions",
     model: "gpt-4o-mini",
@@ -80,7 +66,9 @@ const providerConfigs: Record<AIProvider, ProviderConfig> = {
       model: "gpt-4o-mini",
       messages,
       stream,
+      max_tokens: 1024,
     }),
+    parseResponse: (data: any) => data.choices?.[0]?.message?.content || '',
   },
   gemini: {
     url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
@@ -89,12 +77,27 @@ const providerConfigs: Record<AIProvider, ProviderConfig> = {
       "x-goog-api-key": apiKey,
       "Content-Type": "application/json",
     }),
-    formatBody: (messages: any[], _stream: boolean) => ({
-      contents: messages.map(m => ({
-        role: m.role === 'assistant' ? 'model' : m.role === 'system' ? 'user' : 'user',
-        parts: [{ text: m.content }]
-      })),
-    }),
+    formatBody: (messages: any[], _stream: boolean) => {
+      // Convert messages to Gemini format
+      const contents = [];
+      let systemContent = '';
+      
+      for (const m of messages) {
+        if (m.role === 'system') {
+          systemContent = m.content;
+        } else {
+          contents.push({
+            role: m.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: m.role === 'user' && systemContent && contents.length === 0 
+              ? `${systemContent}\n\n${m.content}` 
+              : m.content }]
+          });
+        }
+      }
+      
+      return { contents };
+    },
+    parseResponse: (data: any) => data.candidates?.[0]?.content?.parts?.[0]?.text || '',
   },
   claude: {
     url: "https://api.anthropic.com/v1/messages",
@@ -115,14 +118,13 @@ const providerConfigs: Record<AIProvider, ProviderConfig> = {
         stream,
       };
     },
+    parseResponse: (data: any) => data.content?.[0]?.text || '',
   },
 };
 
 // Get API key for provider
 const getApiKey = (provider: AIProvider): string | null => {
   switch (provider) {
-    case 'lovable':
-      return Deno.env.get('LOVABLE_API_KEY') || null;
     case 'openai':
       return Deno.env.get('OPENAI_API_KEY') || Deno.env.get('AI_API_KEY') || null;
     case 'gemini':
@@ -134,18 +136,25 @@ const getApiKey = (provider: AIProvider): string | null => {
   }
 };
 
-// Parse response based on provider
-const parseResponse = async (response: Response, provider: AIProvider): Promise<string> => {
-  const data = await response.json();
-  
-  switch (provider) {
-    case 'gemini':
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    case 'claude':
-      return data.content?.[0]?.text || '';
-    default: // lovable, openai
-      return data.choices?.[0]?.message?.content || '';
+// Determine which provider to use based on available API keys
+const getActiveProvider = (requestedProvider?: string): AIProvider | null => {
+  // If a specific provider is requested and has an API key, use it
+  if (requestedProvider && requestedProvider in providerConfigs) {
+    const provider = requestedProvider as AIProvider;
+    if (getApiKey(provider)) {
+      return provider;
+    }
   }
+  
+  // Otherwise, find the first provider with an available API key
+  const providers: AIProvider[] = ['openai', 'gemini', 'claude'];
+  for (const provider of providers) {
+    if (getApiKey(provider)) {
+      return provider;
+    }
+  }
+  
+  return null;
 };
 
 serve(async (req) => {
@@ -155,64 +164,38 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, provider = 'lovable', stream = false } = await req.json();
+    const { messages, provider: requestedProvider, stream = false } = await req.json();
+    
+    console.log("BloodVista Chat request received:", { 
+      messageCount: messages?.length, 
+      requestedProvider, 
+      stream 
+    });
 
     if (!messages || !Array.isArray(messages)) {
+      console.error("Invalid messages array");
       return new Response(
         JSON.stringify({ error: "Messages array is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const activeProvider = provider as AIProvider;
-    const config = providerConfigs[activeProvider];
+    const activeProvider = getActiveProvider(requestedProvider);
     
-    if (!config) {
+    if (!activeProvider) {
+      console.error("No AI provider API key configured");
       return new Response(
-        JSON.stringify({ error: `Unknown provider: ${provider}` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const apiKey = getApiKey(activeProvider);
-    
-    if (!apiKey) {
-      // Fallback to Lovable AI if no API key configured
-      if (activeProvider !== 'lovable') {
-        const lovableKey = Deno.env.get('LOVABLE_API_KEY');
-        if (lovableKey) {
-          console.log(`No API key for ${activeProvider}, falling back to Lovable AI`);
-          const fallbackConfig = providerConfigs.lovable;
-          const fullMessages = [
-            { role: "system", content: SYSTEM_PROMPT },
-            ...messages
-          ];
-          
-          const response = await fetch(fallbackConfig.url, {
-            method: "POST",
-            headers: fallbackConfig.getHeaders(lovableKey),
-            body: JSON.stringify(fallbackConfig.formatBody(fullMessages, stream)),
-          });
-          
-          if (stream && response.body) {
-            return new Response(response.body, {
-              headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-            });
-          }
-          
-          const content = await parseResponse(response, 'lovable');
-          return new Response(
-            JSON.stringify({ content, provider: 'lovable' }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-      }
-      
-      return new Response(
-        JSON.stringify({ error: `API key not configured for ${activeProvider}` }),
+        JSON.stringify({ 
+          error: "No AI provider configured. Please set OPENAI_API_KEY, GEMINI_API_KEY, or ANTHROPIC_API_KEY in your environment variables." 
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log("Using AI provider:", activeProvider);
+    
+    const config = providerConfigs[activeProvider];
+    const apiKey = getApiKey(activeProvider)!;
 
     // Prepare messages with system prompt
     const fullMessages = [
@@ -221,6 +204,8 @@ serve(async (req) => {
     ];
 
     // Make request to AI provider
+    console.log("Calling AI API:", config.url);
+    
     const response = await fetch(config.url, {
       method: "POST",
       headers: config.getHeaders(apiKey),
@@ -238,10 +223,10 @@ serve(async (req) => {
         );
       }
       
-      if (response.status === 402) {
+      if (response.status === 401 || response.status === 403) {
         return new Response(
-          JSON.stringify({ error: "Payment required. Please check your AI service quota." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Invalid API key. Please check your configuration." }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       
@@ -251,15 +236,19 @@ serve(async (req) => {
       );
     }
 
-    // Handle streaming response (only for OpenAI-compatible providers)
-    if (stream && (activeProvider === 'lovable' || activeProvider === 'openai') && response.body) {
+    // Handle streaming response (only for OpenAI)
+    if (stream && activeProvider === 'openai' && response.body) {
+      console.log("Returning streaming response");
       return new Response(response.body, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
       });
     }
 
     // Parse non-streaming response
-    const content = await parseResponse(response, activeProvider);
+    const data = await response.json();
+    const content = config.parseResponse(data);
+    
+    console.log("AI response received, length:", content.length);
     
     return new Response(
       JSON.stringify({ content, provider: activeProvider }),

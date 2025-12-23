@@ -1,9 +1,7 @@
 // Provider-agnostic AI Client abstraction layer
 // Supports multiple AI providers configured via environment variables
 
-import { supabase } from "@/integrations/supabase/client";
-
-export type AIProvider = 'lovable' | 'openai' | 'gemini' | 'claude';
+export type AIProvider = 'openai' | 'gemini' | 'claude';
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -16,13 +14,13 @@ export interface AIResponse {
   error?: string;
 }
 
-// Get the configured AI provider from environment
-export const getAIProvider = (): AIProvider => {
-  const provider = import.meta.env.VITE_AI_PROVIDER?.toLowerCase() || 'lovable';
-  if (['lovable', 'openai', 'gemini', 'claude'].includes(provider)) {
+// Get the configured AI provider from environment (optional - backend auto-detects)
+export const getAIProvider = (): AIProvider | undefined => {
+  const provider = import.meta.env.VITE_AI_PROVIDER?.toLowerCase();
+  if (provider && ['openai', 'gemini', 'claude'].includes(provider)) {
     return provider as AIProvider;
   }
-  return 'lovable'; // Default to Lovable AI (no API key required)
+  return undefined; // Let backend auto-detect based on available API keys
 };
 
 // Send chat request through the edge function

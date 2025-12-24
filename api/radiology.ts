@@ -1,4 +1,12 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+export const config = {
+  runtime: 'edge',
+};
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
 
 interface AnalysisResult {
   summary: string;
@@ -13,56 +21,53 @@ interface AnalysisResult {
   disclaimer: string;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Handle CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
+export default async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   try {
-    const { imageBase64, scanType, fileName } = req.body;
+    const { imageBase64, scanType, fileName } = await req.json();
 
     if (!imageBase64) {
-      return res.status(400).json({ error: 'No image data provided' });
+      return new Response(JSON.stringify({ error: 'No image data provided' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     if (!scanType || !['xray', 'ct', 'mri'].includes(scanType)) {
-      return res.status(400).json({ error: 'Invalid scan type. Must be xray, ct, or mri' });
+      return new Response(JSON.stringify({ error: 'Invalid scan type. Must be xray, ct, or mri' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = (process.env.OPENAI_API_KEY || '').trim();
     if (!apiKey) {
-      return res.status(500).json({ error: 'OPENAI_API_KEY not configured' });
+      return new Response(JSON.stringify({ error: 'OPENAI_API_KEY not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    console.log(`Processing ${scanType} scan: ${fileName}`);
+    const systemPrompt = `You are a medical imaging AI assistant specialized in radiology analysis.
+Analyze ${String(scanType).toUpperCase()} images and return structured findings.
+IMPORTANT: educational only, not a diagnosis.
 
-    const systemPrompt = `You are a medical imaging AI assistant specialized in radiology analysis. 
-You analyze ${scanType.toUpperCase()} images and provide structured findings.
-IMPORTANT: Your analysis is for educational/informational purposes only and NOT a medical diagnosis.
-Always recommend consulting a qualified healthcare professional.
-
-Respond with a JSON object containing:
-- summary: A brief overview of what you observe (2-3 sentences)
-- findings: An array of findings, each with:
-  - category: The anatomical area or finding type
-  - description: Detailed description of the finding
-  - severity: One of "normal", "mild", "moderate", or "severe"
-  - confidence: Your confidence level from 0.0 to 1.0
-- confidenceScore: Overall confidence in the analysis (0.0 to 1.0)`;
+Return JSON with: summary, findings[{category,description,severity,confidence}], confidenceScore.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -72,44 +77,40 @@ Respond with a JSON object containing:
           {
             role: 'user',
             content: [
-              {
-                type: 'text',
-                text: `Please analyze this ${scanType.toUpperCase()} scan and provide your findings in JSON format.`
-              },
+              { type: 'text', text: `Analyze this ${String(scanType).toUpperCase()} scan and respond in JSON.` },
               {
                 type: 'image_url',
                 image_url: {
-                  url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`,
-                  detail: 'high'
-                }
-              }
-            ]
-          }
+                  url: String(imageBase64).startsWith('data:')
+                    ? imageBase64
+                    : `data:image/jpeg;base64,${imageBase64}`,
+                  detail: 'high',
+                },
+              },
+            ],
+          },
         ],
         max_tokens: 2000,
-        response_format: { type: 'json_object' }
+        response_format: { type: 'json_object' },
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('OpenAI API error:', response.status, errorText);
-      
-      if (response.status === 429) {
-        return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
-      }
-      if (response.status === 401) {
-        return res.status(401).json({ error: 'Invalid API key.' });
-      }
-      
-      return res.status(500).json({ error: 'AI service error' });
+      return new Response(JSON.stringify({ error: 'AI service error' }), {
+        status: response.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
-
     if (!content) {
-      return res.status(500).json({ error: 'No content in AI response' });
+      return new Response(JSON.stringify({ error: 'No content in AI response' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const parsed = JSON.parse(content);
@@ -119,15 +120,25 @@ Respond with a JSON object containing:
       findings: parsed.findings || [],
       confidenceScore: parsed.confidenceScore || 0.75,
       provider: 'openai',
-      disclaimer: 'This AI analysis is for informational purposes only and is NOT a medical diagnosis. Please consult a qualified healthcare professional for proper medical advice.'
+      disclaimer:
+        'This AI analysis is for informational purposes only and is NOT a medical diagnosis. Please consult a qualified healthcare professional.',
     };
 
-    return res.status(200).json(result);
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('Radiology analysis error:', error);
-    return res.status(500).json({ 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      details: 'Failed to analyze the radiology image'
-    });
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Unknown error',
+        details: 'Failed to analyze the radiology image',
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   }
 }

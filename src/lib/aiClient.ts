@@ -23,29 +23,52 @@ export const getAIProvider = (): AIProvider | undefined => {
   return undefined; // Let backend auto-detect based on available API keys
 };
 
-// Send chat request through the edge function
+// Determine the API endpoint based on environment
+const getApiEndpoint = (path: string): string => {
+  // Use Vercel API routes if available (production)
+  // Fall back to Supabase edge functions for local/preview
+  const vercelUrl = import.meta.env.VITE_API_URL;
+  if (vercelUrl) {
+    return `${vercelUrl}/api/${path}`;
+  }
+  
+  // Check if we're on a Vercel deployment (has window.location)
+  if (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')) {
+    return `/api/${path}`;
+  }
+  
+  // Fall back to Supabase edge functions
+  return `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bloodvista-${path}`;
+};
+
+// Send chat request through the API
 export const sendChatMessage = async (
   messages: ChatMessage[],
   onStream?: (chunk: string) => void
 ): Promise<AIResponse> => {
   const provider = getAIProvider();
+  const endpoint = getApiEndpoint('chat');
+  const isSupabase = endpoint.includes('supabase');
   
   try {
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bloodvista-chat`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ 
-          messages,
-          provider,
-          stream: !!onStream
-        }),
-      }
-    );
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Only add auth header for Supabase
+    if (isSupabase) {
+      headers['Authorization'] = `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`;
+    }
+    
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ 
+        messages,
+        provider,
+        stream: !!onStream
+      }),
+    });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

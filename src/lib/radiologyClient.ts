@@ -112,25 +112,61 @@ export async function anonymizeImage(base64: string): Promise<string> {
   return compressImage(base64);
 }
 
-// Call the radiology analysis edge function
+// Determine the API endpoint based on environment
+const getRadiologyEndpoint = (): { url: string; useSupabase: boolean } => {
+  // Use Vercel API routes if available (production)
+  const vercelUrl = import.meta.env.VITE_API_URL;
+  if (vercelUrl) {
+    return { url: `${vercelUrl}/api/radiology`, useSupabase: false };
+  }
+  
+  // Check if we're on a Vercel deployment
+  if (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')) {
+    return { url: `/api/radiology`, useSupabase: false };
+  }
+  
+  // Fall back to Supabase edge functions
+  return { 
+    url: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/radiology-analysis`,
+    useSupabase: true 
+  };
+};
+
+// Call the radiology analysis API
 export async function analyzeRadiologyImage(
   imageBase64: string,
   scanType: ScanType,
   fileName: string
 ): Promise<AnalysisResult> {
-  const { data, error } = await supabase.functions.invoke('radiology-analysis', {
-    body: {
+  const { url, useSupabase } = getRadiologyEndpoint();
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
+  // Add auth header for Supabase
+  if (useSupabase) {
+    headers['Authorization'] = `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`;
+  }
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
       imageBase64,
       scanType,
       fileName,
-    },
+    }),
   });
 
-  if (error) {
-    console.error('Edge function error:', error);
-    throw new Error(error.message || 'Failed to analyze image');
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    console.error('Radiology API error:', response.status, errorData);
+    throw new Error(errorData.error || 'Failed to analyze image');
   }
 
+  const data = await response.json();
+  
   if (data.error) {
     throw new Error(data.error);
   }

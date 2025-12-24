@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 
 export type ScanType = 'xray' | 'ct' | 'mri';
 
@@ -180,7 +181,7 @@ export async function saveScanRecord(
       file_name: fileName,
       file_url: fileUrl,
       analysis_summary: analysisResult.summary,
-      findings: analysisResult.findings as unknown as Record<string, unknown>[],
+      findings: analysisResult.findings as unknown as Json,
       confidence_score: analysisResult.confidenceScore,
       ai_provider: analysisResult.provider,
     }])

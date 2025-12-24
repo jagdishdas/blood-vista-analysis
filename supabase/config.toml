@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.bloodvista-chat]
 verify_jwt = false
+
+[functions.radiology-analysis]
+verify_jwt = false

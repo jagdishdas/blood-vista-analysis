@@ -14,7 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      radiology_scans: {
+        Row: {
+          ai_provider: string | null
+          analysis_summary: string | null
+          confidence_score: number | null
+          created_at: string
+          file_name: string
+          file_url: string | null
+          findings: Json | null
+          id: string
+          scan_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_provider?: string | null
+          analysis_summary?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          file_name: string
+          file_url?: string | null
+          findings?: Json | null
+          id?: string
+          scan_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_provider?: string | null
+          analysis_summary?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          file_name?: string
+          file_url?: string | null
+          findings?: Json | null
+          id?: string
+          scan_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

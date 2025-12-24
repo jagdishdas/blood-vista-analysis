@@ -1,66 +1,62 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+export const config = {
+  runtime: 'edge',
+};
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
 
 const SYSTEM_PROMPT = `You are BloodVista Assistant, an AI assistant for the BloodVista application.
 
-About BloodVista:
-BloodVista helps users understand their blood test results by providing easy-to-read analysis, reference ranges, and health insights.
-
-Key Features:
-- Upload blood test reports (PDF or images)
-- Automatic OCR extraction of test values
-- Complete Blood Count (CBC) analysis
-- Comprehensive blood test analysis
-- Color-coded results (normal, low, high)
-- Reference range comparisons
-- Health insights and recommendations
+BloodVista helps users understand blood test results by providing easy-to-read analysis, reference ranges, and health insights.
 
 Guidelines:
 1. Be helpful, friendly, and informative
-2. Explain blood test concepts in simple, understandable terms
-3. Always remind users that you provide educational information only
-4. Never provide medical diagnoses or treatment recommendations
-5. Encourage users to consult healthcare professionals for medical concerns
+2. Explain concepts simply
+3. Educational information only (not medical diagnosis)
+4. Encourage consulting healthcare professionals`;
 
-Important Disclaimer: BloodVista provides educational information only and is not a substitute for professional medical advice.`;
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Handle CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
+export default async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   try {
-    const { messages } = req.body;
+    const { messages } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: 'Messages array is required' });
+      return new Response(JSON.stringify({ error: 'Messages array is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = (process.env.OPENAI_API_KEY || '').trim();
     if (!apiKey) {
-      return res.status(500).json({ error: 'OPENAI_API_KEY not configured' });
+      return new Response(JSON.stringify({ error: 'OPENAI_API_KEY not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          ...messages
-        ],
+        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
         max_tokens: 1024,
       }),
     });
@@ -68,25 +64,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('OpenAI API error:', response.status, errorText);
-      
-      if (response.status === 429) {
-        return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
-      }
-      if (response.status === 401) {
-        return res.status(401).json({ error: 'Invalid API key.' });
-      }
-      
-      return res.status(500).json({ error: 'AI service error' });
+      return new Response(JSON.stringify({ error: 'AI service error' }), {
+        status: response.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
 
-    return res.status(200).json({ content, provider: 'openai' });
+    return new Response(JSON.stringify({ content, provider: 'openai' }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('Chat error:', error);
-    return res.status(500).json({ 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    });
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   }
 }

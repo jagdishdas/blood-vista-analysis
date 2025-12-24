@@ -4,10 +4,8 @@ import { pdfjs } from 'react-pdf';
 import { preprocessImageForOCR, enhanceOCRText } from './ocr-enhancer';
 
 // Initialize PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.js',
-  import.meta.url,
-).toString();
+// Use CDN for PDF.js worker to avoid Vite bundling issues
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 /**
  * Call Google Cloud Vision OCR via edge function

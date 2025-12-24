@@ -4,11 +4,8 @@ import { pdfjs } from 'react-pdf';
 import { preprocessImageForOCR, enhanceOCRText, extractMedicalValues } from './ocr-enhancer';
 import { ExtractedBloodTestData, BloodTestParameter, BloodTestFormData } from '@/types/blood-test.types';
 
-// Initialize PDF.js with a more reliable worker configuration
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.js',
-  import.meta.url,
-).toString();
+// Use CDN for PDF.js worker to avoid Vite bundling issues
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 // Create OCR worker with enhanced settings for medical reports
 const createOCRWorker = async (): Promise<Tesseract.Worker> => {

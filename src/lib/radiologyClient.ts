@@ -114,21 +114,20 @@ export async function anonymizeImage(base64: string): Promise<string> {
 
 // Determine the API endpoint based on environment
 const getRadiologyEndpoint = (): { url: string; useSupabase: boolean } => {
-  // Use Vercel API routes if available (production)
-  const vercelUrl = import.meta.env.VITE_API_URL;
-  if (vercelUrl) {
-    return { url: `${vercelUrl}/api/radiology`, useSupabase: false };
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (apiUrl) {
+    return { url: `${apiUrl}/api/radiology`, useSupabase: false };
   }
-  
-  // Check if we're on a Vercel deployment
-  if (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')) {
+
+  // In production builds (e.g. Vercel + custom domains), use same-origin API routes
+  if (import.meta.env.PROD) {
     return { url: `/api/radiology`, useSupabase: false };
   }
-  
-  // Fall back to Supabase edge functions
-  return { 
+
+  // In local dev / Lovable preview, fall back to backend functions
+  return {
     url: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/radiology-analysis`,
-    useSupabase: true 
+    useSupabase: true,
   };
 };
 

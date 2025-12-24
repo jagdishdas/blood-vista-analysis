@@ -56,14 +56,21 @@ const Header = ({ language, setLanguage }: HeaderProps) => {
   return (
     <header className="w-full bg-white border-b border-gray-200 shadow-sm">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div className="w-10 h-10 rounded-full bg-medical-600 text-white flex items-center justify-center font-bold text-xl">
-            BV
+        <div className="flex items-center gap-6">
+          <div className="flex items-center space-x-2">
+            <div className="w-10 h-10 rounded-full bg-medical-600 text-white flex items-center justify-center font-bold text-xl">
+              BV
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">BloodVista</h1>
+              <p className="text-sm text-gray-500">Blood Test Analyzer</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">BloodVista</h1>
-            <p className="text-sm text-gray-500">Blood Test Analyzer</p>
-          </div>
+
+          <nav aria-label="Primary" className="hidden md:flex items-center gap-2">
+            <Button variant="ghost" onClick={() => navigate('/')}>Blood Tests</Button>
+            <Button variant="ghost" onClick={() => navigate('/radiology')}>Radiology AI</Button>
+          </nav>
         </div>
         
         <div className="flex items-center gap-4">

@@ -25,19 +25,14 @@ export const getAIProvider = (): AIProvider | undefined => {
 
 // Determine the API endpoint based on environment
 const getApiEndpoint = (path: string): string => {
-  // Use Vercel API routes if available (production)
-  // Fall back to Supabase edge functions for local/preview
-  const vercelUrl = import.meta.env.VITE_API_URL;
-  if (vercelUrl) {
-    return `${vercelUrl}/api/${path}`;
-  }
-  
-  // Check if we're on a Vercel deployment (has window.location)
-  if (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')) {
-    return `/api/${path}`;
-  }
-  
-  // Fall back to Supabase edge functions
+  // Explicit override (useful for calling a separate API host)
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (apiUrl) return `${apiUrl}/api/${path}`;
+
+  // In production builds (e.g. Vercel + custom domains), use same-origin API routes
+  if (import.meta.env.PROD) return `/api/${path}`;
+
+  // In local dev / Lovable preview, fall back to backend functions
   return `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bloodvista-${path}`;
 };
 
@@ -96,8 +91,11 @@ export const sendChatMessage = async (
       };
     }
 
-    // Handle streaming response
-    if (onStream && response.body) {
+    const contentType = response.headers.get('content-type') || '';
+    const isEventStream = contentType.includes('text/event-stream');
+
+    // Handle streaming response (SSE)
+    if (onStream && isEventStream && response.body) {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let fullContent = '';
@@ -106,28 +104,28 @@ export const sendChatMessage = async (
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         buffer += decoder.decode(value, { stream: true });
-        
+
         // Process SSE lines
         let newlineIndex: number;
         while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
           let line = buffer.slice(0, newlineIndex);
           buffer = buffer.slice(newlineIndex + 1);
-          
+
           if (line.endsWith('\r')) line = line.slice(0, -1);
           if (line.startsWith(':') || line.trim() === '') continue;
           if (!line.startsWith('data: ')) continue;
-          
+
           const jsonStr = line.slice(6).trim();
           if (jsonStr === '[DONE]') break;
-          
+
           try {
             const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              fullContent += content;
-              onStream(content);
+            const delta = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (delta) {
+              fullContent += delta;
+              onStream(delta);
             }
           } catch {
             // Incomplete JSON, put back in buffer
@@ -137,14 +135,19 @@ export const sendChatMessage = async (
         }
       }
 
-      return { content: fullContent, provider };
+      return { content: fullContent, provider: (provider ?? 'openai') as AIProvider };
     }
 
-    // Non-streaming response
+    // Non-streaming response (JSON)
     const data = await response.json();
+    const content = data.content || data.choices?.[0]?.message?.content || '';
+
+    // If caller requested streaming but server returned JSON, emit once
+    if (onStream && content) onStream(content);
+
     return {
-      content: data.content || data.choices?.[0]?.message?.content || '',
-      provider
+      content,
+      provider: (provider ?? 'openai') as AIProvider,
     };
   } catch (error) {
     console.error('AI Client error:', error);

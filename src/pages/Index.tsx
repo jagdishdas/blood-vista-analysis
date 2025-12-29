@@ -11,6 +11,7 @@ import CBCResults from "@/components/CBCResults";
 import BloodTestForm from "@/components/BloodTestForm";
 import BloodTestResults from "@/components/BloodTestResults";
 import TestCategorySelector from "@/components/TestCategorySelector";
+import MedicalDisclaimer from "@/components/MedicalDisclaimer";
 import { analyzeCBC } from "@/utils/cbc-analyzer";
 import { analyzeBloodTest } from "@/utils/blood-test-analyzer";
 import { Toaster } from "@/components/ui/toaster";
@@ -202,6 +203,8 @@ const Index = () => {
             selectedCategory={selectedTestCategory}
             onCategorySelect={handleCategorySelect}
           />
+
+          <MedicalDisclaimer language={language} variant="compact" className="mb-6" />
 
           {renderTestForm()}
 

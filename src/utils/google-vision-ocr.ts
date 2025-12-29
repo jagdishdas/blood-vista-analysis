@@ -9,6 +9,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pd
 
 /**
  * Call Google Cloud Vision OCR via edge function with fallback to local Tesseract
+ * Includes timeout handling to prevent long waits
  */
 export const callGoogleVisionOCR = async (imageBase64: string): Promise<OCRResult> => {
   console.log('Attempting Google Cloud Vision OCR...');
@@ -19,18 +20,27 @@ export const callGoogleVisionOCR = async (imageBase64: string): Promise<OCRResul
       ? imageBase64.split(',')[1]
       : imageBase64;
 
-    const { data, error } = await supabase.functions.invoke('google-vision-ocr', {
+    // Create timeout promise (60 seconds max)
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('OCR request timed out after 60 seconds')), 60000);
+    });
+
+    // Create OCR request promise
+    const ocrPromise = supabase.functions.invoke('google-vision-ocr', {
       body: { imageBase64: base64Data }
     });
 
+    // Race between timeout and OCR
+    const { data, error } = await Promise.race([ocrPromise, timeoutPromise]) as any;
+
     if (error) {
       console.error('Google Vision OCR error:', error);
-      throw new Error(`OCR failed: ${error.message}`);
+      throw new Error(`Google Vision OCR failed: ${error.message || 'Unknown error'}`);
     }
 
     if (!data.success) {
       console.error('Google Vision OCR failed:', data.error);
-      throw new Error(`OCR failed: ${data.error}`);
+      throw new Error(`Google Vision OCR failed: ${data.error || 'Unknown error'}`);
     }
 
     console.log('Google Vision OCR completed. Confidence:', data.confidence);
@@ -47,12 +57,19 @@ export const callGoogleVisionOCR = async (imageBase64: string): Promise<OCRResul
     console.warn('Google Vision failed, falling back to local Tesseract:', visionError);
     console.log('Starting local Tesseract.js OCR as fallback...');
 
-    // Dynamic import to avoid bundling issues
-    const { processImage } = await import('./pdf-processor');
-    const result = await processImage(imageBase64);
+    try {
+      // Dynamic import to avoid bundling issues
+      const { processImage } = await import('./pdf-processor');
+      const result = await processImage(imageBase64);
 
-    console.log('Fallback Tesseract OCR completed. Confidence:', result.confidence);
-    return result;
+      console.log('Fallback Tesseract OCR completed. Confidence:', result.confidence);
+      return result;
+    } catch (fallbackError) {
+      console.error('Both Google Vision and Tesseract failed:', fallbackError);
+      throw new Error(
+        'Unable to process the image. Please ensure the image is clear and try again, or enter values manually.'
+      );
+    }
   }
 };
 

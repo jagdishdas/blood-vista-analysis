@@ -16,12 +16,12 @@ import {
   Legend,
   Cell,
 } from "recharts";
-import { 
-  CheckCircle, 
-  AlertTriangle, 
-  AlertCircle, 
-  FileText, 
-  Share2, 
+import {
+  CheckCircle,
+  AlertTriangle,
+  AlertCircle,
+  FileText,
+  Share2,
   Download,
   Printer,
   Eye
@@ -30,6 +30,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CBCSummaryCard from "./CBCSummaryCard";
+import MedicalDisclaimer from "./MedicalDisclaimer";
 
 interface CBCResultsProps {
   analysis: CBCAnalysis;
@@ -62,7 +63,7 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
   const chartData = analysis.results.map((result) => {
     const value = parseFloat(result.parameter.value);
     const { min, max } = result.parameter.referenceRange;
-    
+
     return {
       name: result.parameter.id.toUpperCase(),
       displayName: language === "en" ? result.parameter.nameEn : result.parameter.nameUr,
@@ -98,22 +99,22 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
     secondary: analysis.results.filter(r => r.parameter.category === 'Secondary'),
     differential: analysis.results.filter(r => r.parameter.category === 'Differential')
   };
-  
+
   // Count abnormal results
   const abnormalResults = analysis.results.filter(r => r.status !== 'normal');
-  
+
   // Handle mock print function
   const handlePrint = () => {
     window.print();
   };
-  
+
   // Handle mock export function
   const handleExport = () => {
-    alert(language === 'en' 
+    alert(language === 'en'
       ? 'This feature will export the results as a PDF document.'
       : 'یہ خصوصیت نتائج کو PDF دستاویز کے طور پر برآمد کرے گی۔');
   };
-  
+
   // Handle mock share function
   const handleShare = () => {
     alert(language === 'en'
@@ -137,7 +138,7 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
           {language === "en" ? "Share" : "شیئر کریں"}
         </Button>
       </div>
-      
+
       <Card className="print:shadow-none">
         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
           <CardTitle>
@@ -193,13 +194,13 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                       <span className="text-2xl font-bold">{analysis.results.length}</span>
                     </div>
                     <p className="text-sm text-gray-600 mt-2">
-                      {language === "en" 
-                        ? "Total parameters analyzed" 
+                      {language === "en"
+                        ? "Total parameters analyzed"
                         : "کل تجزیہ شدہ پیرامیٹرز"}
                     </p>
                   </CardContent>
                 </Card>
-                
+
                 <Card className="shadow-sm border border-red-200 bg-red-50">
                   <CardContent className="pt-6">
                     <div className="flex justify-between items-center">
@@ -207,27 +208,27 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                       <span className="text-2xl font-bold">{abnormalResults.length}</span>
                     </div>
                     <p className="text-sm text-gray-600 mt-2">
-                      {language === "en" 
-                        ? "Parameters outside normal range" 
+                      {language === "en"
+                        ? "Parameters outside normal range"
                         : "معمول کی حد سے باہر پیرامیٹرز"}
                     </p>
                   </CardContent>
                 </Card>
-                
+
                 <Card className="shadow-sm border border-blue-200 bg-blue-50">
                   <CardContent className="pt-6">
                     <div className="flex justify-between items-center">
                       <h3 className="font-medium text-gray-700">{language === "en" ? "Deviation" : "انحراف"}</h3>
                       <span className="text-2xl font-bold">
-                        {abnormalResults.length > 0 
-                          ? `${Math.abs(Math.round(abnormalResults.reduce((max, r) => 
-                              Math.abs(r.deviation) > Math.abs(max) ? r.deviation : max, 0)))}%` 
+                        {abnormalResults.length > 0
+                          ? `${Math.abs(Math.round(abnormalResults.reduce((max, r) =>
+                            Math.abs(r.deviation) > Math.abs(max) ? r.deviation : max, 0)))}%`
                           : "0%"}
                       </span>
                     </div>
                     <p className="text-sm text-gray-600 mt-2">
-                      {language === "en" 
-                        ? "Maximum parameter deviation" 
+                      {language === "en"
+                        ? "Maximum parameter deviation"
                         : "زیادہ سے زیادہ پیرامیٹر انحراف"}
                     </p>
                   </CardContent>
@@ -246,15 +247,15 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                       margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="name" 
-                        angle={-45} 
+                      <XAxis
+                        dataKey="name"
+                        angle={-45}
                         textAnchor="end"
-                        height={60} 
-                        tick={{ fontSize: 12 }} 
+                        height={60}
+                        tick={{ fontSize: 12 }}
                       />
                       <YAxis />
-                      <Tooltip 
+                      <Tooltip
                         formatter={(value: any, name, props) => {
                           const item = props.payload;
                           return [
@@ -269,12 +270,12 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                         stroke="#0284c7"
                         strokeWidth={2}
                         dot={({ cx, cy, payload }) => (
-                          <circle 
-                            cx={cx} 
-                            cy={cy} 
-                            r={6} 
-                            fill={getStatusColor(payload.status)} 
-                            stroke="white" 
+                          <circle
+                            cx={cx}
+                            cy={cy}
+                            r={6}
+                            fill={getStatusColor(payload.status)}
+                            stroke="white"
                             strokeWidth={2}
                           />
                         )}
@@ -302,7 +303,7 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                   </ResponsiveContainer>
                 </div>
               </div>
-              
+
               {/* Deviation Chart */}
               {abnormalResults.length > 0 && (
                 <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
@@ -316,22 +317,22 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                         margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          dataKey="name" 
-                          angle={-45} 
+                        <XAxis
+                          dataKey="name"
+                          angle={-45}
                           textAnchor="end"
-                          height={60} 
-                          tick={{ fontSize: 12 }} 
+                          height={60}
+                          tick={{ fontSize: 12 }}
                         />
-                        <YAxis 
-                          label={{ 
-                            value: language === "en" ? 'Deviation (%)' : 'انحراف (%)', 
-                            angle: -90, 
+                        <YAxis
+                          label={{
+                            value: language === "en" ? 'Deviation (%)' : 'انحراف (%)',
+                            angle: -90,
                             position: 'insideLeft',
                             style: { textAnchor: 'middle' }
-                          }} 
+                          }}
                         />
-                        <Tooltip 
+                        <Tooltip
                           formatter={(value: number, name, props) => {
                             const item = props.payload;
                             return [
@@ -395,14 +396,14 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end space-x-2">
                               <span className={`
-                                ${result.status === "normal" ? "text-green-700" : 
+                                ${result.status === "normal" ? "text-green-700" :
                                   result.status === "low" ? "text-amber-700" : "text-red-700"}
                               `}>
-                                {language === "en" 
-                                  ? result.status.charAt(0).toUpperCase() + result.status.slice(1) 
-                                  : result.status === "normal" 
+                                {language === "en"
+                                  ? result.status.charAt(0).toUpperCase() + result.status.slice(1)
+                                  : result.status === "normal"
                                     ? "معمول کے مطابق"
-                                    : result.status === "low" 
+                                    : result.status === "low"
                                       ? "کم"
                                       : "زیادہ"}
                                 {result.status !== "normal" && (
@@ -444,13 +445,13 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                       <span className="text-2xl font-bold">{analysis.results.length}</span>
                     </div>
                     <p className="text-sm text-gray-600 mt-2">
-                      {language === "en" 
-                        ? "Total parameters analyzed" 
+                      {language === "en"
+                        ? "Total parameters analyzed"
                         : "کل تجزیہ شدہ پیرامیٹرز"}
                     </p>
                   </CardContent>
                 </Card>
-                
+
                 <Card className="shadow-sm border border-red-200 bg-red-50">
                   <CardContent className="pt-6">
                     <div className="flex justify-between items-center">
@@ -458,27 +459,27 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                       <span className="text-2xl font-bold">{abnormalResults.length}</span>
                     </div>
                     <p className="text-sm text-gray-600 mt-2">
-                      {language === "en" 
-                        ? "Parameters outside normal range" 
+                      {language === "en"
+                        ? "Parameters outside normal range"
                         : "معمول کی حد سے باہر پیرامیٹرز"}
                     </p>
                   </CardContent>
                 </Card>
-                
+
                 <Card className="shadow-sm border border-blue-200 bg-blue-50">
                   <CardContent className="pt-6">
                     <div className="flex justify-between items-center">
                       <h3 className="font-medium text-gray-700">{language === "en" ? "Deviation" : "انحراف"}</h3>
                       <span className="text-2xl font-bold">
-                        {abnormalResults.length > 0 
-                          ? `${Math.abs(Math.round(abnormalResults.reduce((max, r) => 
-                              Math.abs(r.deviation) > Math.abs(max) ? r.deviation : max, 0)))}%` 
+                        {abnormalResults.length > 0
+                          ? `${Math.abs(Math.round(abnormalResults.reduce((max, r) =>
+                            Math.abs(r.deviation) > Math.abs(max) ? r.deviation : max, 0)))}%`
                           : "0%"}
                       </span>
                     </div>
                     <p className="text-sm text-gray-600 mt-2">
-                      {language === "en" 
-                        ? "Maximum parameter deviation" 
+                      {language === "en"
+                        ? "Maximum parameter deviation"
                         : "زیادہ سے زیادہ پیرامیٹر انحراف"}
                     </p>
                   </CardContent>
@@ -497,15 +498,15 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                       margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="name" 
-                        angle={-45} 
+                      <XAxis
+                        dataKey="name"
+                        angle={-45}
                         textAnchor="end"
-                        height={60} 
-                        tick={{ fontSize: 12 }} 
+                        height={60}
+                        tick={{ fontSize: 12 }}
                       />
                       <YAxis />
-                      <Tooltip 
+                      <Tooltip
                         formatter={(value: any, name, props) => {
                           const item = props.payload;
                           return [
@@ -520,12 +521,12 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                         stroke="#0284c7"
                         strokeWidth={2}
                         dot={({ cx, cy, payload }) => (
-                          <circle 
-                            cx={cx} 
-                            cy={cy} 
-                            r={6} 
-                            fill={getStatusColor(payload.status)} 
-                            stroke="white" 
+                          <circle
+                            cx={cx}
+                            cy={cy}
+                            r={6}
+                            fill={getStatusColor(payload.status)}
+                            stroke="white"
                             strokeWidth={2}
                           />
                         )}
@@ -553,7 +554,7 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                   </ResponsiveContainer>
                 </div>
               </div>
-              
+
               {/* Deviation Chart */}
               {abnormalResults.length > 0 && (
                 <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
@@ -567,22 +568,22 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                         margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          dataKey="name" 
-                          angle={-45} 
+                        <XAxis
+                          dataKey="name"
+                          angle={-45}
                           textAnchor="end"
-                          height={60} 
-                          tick={{ fontSize: 12 }} 
+                          height={60}
+                          tick={{ fontSize: 12 }}
                         />
-                        <YAxis 
-                          label={{ 
-                            value: language === "en" ? 'Deviation (%)' : 'انحراف (%)', 
-                            angle: -90, 
+                        <YAxis
+                          label={{
+                            value: language === "en" ? 'Deviation (%)' : 'انحراف (%)',
+                            angle: -90,
                             position: 'insideLeft',
                             style: { textAnchor: 'middle' }
-                          }} 
+                          }}
                         />
-                        <Tooltip 
+                        <Tooltip
                           formatter={(value: number, name, props) => {
                             const item = props.payload;
                             return [
@@ -605,7 +606,7 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                   </div>
                 </div>
               )}
-              
+
               {/* Table View for Results */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-4 border-b border-gray-100">
@@ -646,14 +647,14 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end space-x-2">
                               <span className={`
-                                ${result.status === "normal" ? "text-green-700" : 
+                                ${result.status === "normal" ? "text-green-700" :
                                   result.status === "low" ? "text-amber-700" : "text-red-700"}
                               `}>
-                                {language === "en" 
-                                  ? result.status.charAt(0).toUpperCase() + result.status.slice(1) 
-                                  : result.status === "normal" 
+                                {language === "en"
+                                  ? result.status.charAt(0).toUpperCase() + result.status.slice(1)
+                                  : result.status === "normal"
                                     ? "معمول کے مطابق"
-                                    : result.status === "low" 
+                                    : result.status === "low"
                                       ? "کم"
                                       : "زیادہ"}
                                 {result.status !== "normal" && (
@@ -677,7 +678,7 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                 <h3 className="text-lg font-medium">
                   {language === "en" ? "Detailed Analysis" : "تفصیلی تجزیہ"}
                 </h3>
-                
+
                 {/* Primary Parameters */}
                 {categorizedResults.primary.length > 0 && (
                   <div className="space-y-3">
@@ -685,15 +686,14 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                       {language === "en" ? "Primary Parameters" : "بنیادی پیرامیٹرز"}
                     </h4>
                     {categorizedResults.primary.map((result) => (
-                      <div 
-                        key={result.parameter.id} 
-                        className={`p-4 rounded-lg border ${
-                          result.status === "normal" 
-                            ? "border-green-200 bg-green-50" 
-                            : result.status === "low" 
-                            ? "border-amber-200 bg-amber-50"
-                            : "border-red-200 bg-red-50"
-                        }`}
+                      <div
+                        key={result.parameter.id}
+                        className={`p-4 rounded-lg border ${result.status === "normal"
+                            ? "border-green-200 bg-green-50"
+                            : result.status === "low"
+                              ? "border-amber-200 bg-amber-50"
+                              : "border-red-200 bg-red-50"
+                          }`}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex items-center space-x-2">
@@ -703,7 +703,7 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                                 {language === "en" ? result.parameter.nameEn : result.parameter.nameUr}
                               </h4>
                               <p className="text-sm text-gray-600">
-                                {result.parameter.value} {result.parameter.unit} 
+                                {result.parameter.value} {result.parameter.unit}
                                 <span className="text-gray-500 ml-1">
                                   (
                                   {language === "en" ? "Reference: " : "حوالہ: "}
@@ -713,20 +713,19 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                               </p>
                             </div>
                           </div>
-                          <div className={`text-sm font-medium ${
-                            result.status === "normal" 
-                              ? "text-green-700" 
-                              : result.status === "low" 
-                              ? "text-amber-700"
-                              : "text-red-700"
-                          }`}>
-                            {language === "en" 
-                              ? result.status.charAt(0).toUpperCase() + result.status.slice(1) 
-                              : result.status === "normal" 
-                              ? "معمول کے مطابق"
-                              : result.status === "low" 
-                              ? "کم"
-                              : "زیادہ"}
+                          <div className={`text-sm font-medium ${result.status === "normal"
+                              ? "text-green-700"
+                              : result.status === "low"
+                                ? "text-amber-700"
+                                : "text-red-700"
+                            }`}>
+                            {language === "en"
+                              ? result.status.charAt(0).toUpperCase() + result.status.slice(1)
+                              : result.status === "normal"
+                                ? "معمول کے مطابق"
+                                : result.status === "low"
+                                  ? "کم"
+                                  : "زیادہ"}
                             {result.status !== "normal" && (
                               <span className="ml-1">
                                 ({result.deviation > 0 ? "+" : ""}{result.deviation.toFixed(1)}%)
@@ -743,7 +742,7 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                     ))}
                   </div>
                 )}
-                
+
                 {/* Secondary Parameters */}
                 {categorizedResults.secondary.length > 0 && (
                   <div className="space-y-3">
@@ -751,15 +750,14 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                       {language === "en" ? "Secondary Parameters" : "ثانوی پیرامیٹرز"}
                     </h4>
                     {categorizedResults.secondary.map((result) => (
-                      <div 
-                        key={result.parameter.id} 
-                        className={`p-4 rounded-lg border ${
-                          result.status === "normal" 
-                            ? "border-green-200 bg-green-50" 
-                            : result.status === "low" 
-                            ? "border-amber-200 bg-amber-50"
-                            : "border-red-200 bg-red-50"
-                        }`}
+                      <div
+                        key={result.parameter.id}
+                        className={`p-4 rounded-lg border ${result.status === "normal"
+                            ? "border-green-200 bg-green-50"
+                            : result.status === "low"
+                              ? "border-amber-200 bg-amber-50"
+                              : "border-red-200 bg-red-50"
+                          }`}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex items-center space-x-2">
@@ -769,7 +767,7 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                                 {language === "en" ? result.parameter.nameEn : result.parameter.nameUr}
                               </h4>
                               <p className="text-sm text-gray-600">
-                                {result.parameter.value} {result.parameter.unit} 
+                                {result.parameter.value} {result.parameter.unit}
                                 <span className="text-gray-500 ml-1">
                                   (
                                   {language === "en" ? "Reference: " : "حوالہ: "}
@@ -779,20 +777,19 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                               </p>
                             </div>
                           </div>
-                          <div className={`text-sm font-medium ${
-                            result.status === "normal" 
-                              ? "text-green-700" 
-                              : result.status === "low" 
-                              ? "text-amber-700"
-                              : "text-red-700"
-                          }`}>
-                            {language === "en" 
-                              ? result.status.charAt(0).toUpperCase() + result.status.slice(1) 
-                              : result.status === "normal" 
-                              ? "معمول کے مطابق"
-                              : result.status === "low" 
-                              ? "کم"
-                              : "زیادہ"}
+                          <div className={`text-sm font-medium ${result.status === "normal"
+                              ? "text-green-700"
+                              : result.status === "low"
+                                ? "text-amber-700"
+                                : "text-red-700"
+                            }`}>
+                            {language === "en"
+                              ? result.status.charAt(0).toUpperCase() + result.status.slice(1)
+                              : result.status === "normal"
+                                ? "معمول کے مطابق"
+                                : result.status === "low"
+                                  ? "کم"
+                                  : "زیادہ"}
                             {result.status !== "normal" && (
                               <span className="ml-1">
                                 ({result.deviation > 0 ? "+" : ""}{result.deviation.toFixed(1)}%)
@@ -809,7 +806,7 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                     ))}
                   </div>
                 )}
-                
+
                 {/* Differential WBC Count */}
                 {categorizedResults.differential.length > 0 && (
                   <div className="space-y-3">
@@ -817,15 +814,14 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                       {language === "en" ? "Differential WBC Count" : "ڈفرنشیل ڈبلیو بی سی کاؤنٹ"}
                     </h4>
                     {categorizedResults.differential.map((result) => (
-                      <div 
-                        key={result.parameter.id} 
-                        className={`p-4 rounded-lg border ${
-                          result.status === "normal" 
-                            ? "border-green-200 bg-green-50" 
-                            : result.status === "low" 
-                            ? "border-amber-200 bg-amber-50"
-                            : "border-red-200 bg-red-50"
-                        }`}
+                      <div
+                        key={result.parameter.id}
+                        className={`p-4 rounded-lg border ${result.status === "normal"
+                            ? "border-green-200 bg-green-50"
+                            : result.status === "low"
+                              ? "border-amber-200 bg-amber-50"
+                              : "border-red-200 bg-red-50"
+                          }`}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex items-center space-x-2">
@@ -835,7 +831,7 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                                 {language === "en" ? result.parameter.nameEn : result.parameter.nameUr}
                               </h4>
                               <p className="text-sm text-gray-600">
-                                {result.parameter.value} {result.parameter.unit} 
+                                {result.parameter.value} {result.parameter.unit}
                                 <span className="text-gray-500 ml-1">
                                   (
                                   {language === "en" ? "Reference: " : "حوالہ: "}
@@ -845,20 +841,19 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
                               </p>
                             </div>
                           </div>
-                          <div className={`text-sm font-medium ${
-                            result.status === "normal" 
-                              ? "text-green-700" 
-                              : result.status === "low" 
-                              ? "text-amber-700"
-                              : "text-red-700"
-                          }`}>
-                            {language === "en" 
-                              ? result.status.charAt(0).toUpperCase() + result.status.slice(1) 
-                              : result.status === "normal" 
-                              ? "معمول کے مطابق"
-                              : result.status === "low" 
-                              ? "کم"
-                              : "زیادہ"}
+                          <div className={`text-sm font-medium ${result.status === "normal"
+                              ? "text-green-700"
+                              : result.status === "low"
+                                ? "text-amber-700"
+                                : "text-red-700"
+                            }`}>
+                            {language === "en"
+                              ? result.status.charAt(0).toUpperCase() + result.status.slice(1)
+                              : result.status === "normal"
+                                ? "معمول کے مطابق"
+                                : result.status === "low"
+                                  ? "کم"
+                                  : "زیادہ"}
                             {result.status !== "normal" && (
                               <span className="ml-1">
                                 ({result.deviation > 0 ? "+" : ""}{result.deviation.toFixed(1)}%)
@@ -878,7 +873,7 @@ const CBCResults = ({ analysis, language }: CBCResultsProps) => {
               </div>
             </TabsContent>
           </Tabs>
-          
+
           {/* Disclaimer - Show both languages */}
           <Alert className="bg-gray-50 border-gray-200">
             <AlertTitle className="font-semibold">

@@ -63,14 +63,14 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setErrorMessage(null);
-      
+
       console.log(`Selected ${type} file:`, selectedFile.name, selectedFile.size, selectedFile.type);
-      
+
       if (type === 'pdf' && !selectedFile.type.includes('pdf')) {
         toast({
           title: language === 'en' ? 'Invalid File Type' : 'غلط فائل کی قسم',
-          description: language === 'en' 
-            ? 'Please upload a PDF file' 
+          description: language === 'en'
+            ? 'Please upload a PDF file'
             : 'براہ کرم PDF فائل اپلوڈ کریں',
           variant: 'destructive'
         });
@@ -78,14 +78,14 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
       } else if (type === 'image' && !selectedFile.type.includes('image')) {
         toast({
           title: language === 'en' ? 'Invalid File Type' : 'غلط فائل کی قسم',
-          description: language === 'en' 
-            ? 'Please upload an image file (JPG, PNG, etc.)' 
+          description: language === 'en'
+            ? 'Please upload an image file (JPG, PNG, etc.)'
             : 'براہ کرم تصویر فائل اپلوڈ کریں (JPG، PNG، وغیرہ)',
           variant: 'destructive'
         });
         return;
       }
-      
+
       setFile(selectedFile);
       setFileType(type);
     }
@@ -93,15 +93,30 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
 
   const handleProcess = async () => {
     if (!file) return;
-    
+
     setIsProcessing(true);
     setErrorMessage(null);
-    
+
+    // Set a safety timeout to prevent indefinite loading
+    const processingTimeout = setTimeout(() => {
+      setIsProcessing(false);
+      setErrorMessage(language === 'en'
+        ? 'Processing is taking longer than expected. The file may be too large or complex. Please try with a clearer scan or enter values manually.'
+        : 'پروسیسنگ متوقع سے زیادہ وقت لے رہی ہے۔ فائل بہت بڑی یا پیچیدہ ہو سکتی ہے۔ براہ کرم واضح اسکین کے ساتھ دوبارہ کوشش کریں یا قدریں دستی طور پر درج کریں۔');
+      toast({
+        title: language === 'en' ? 'Processing Timeout' : 'پروسیسنگ ٹائم آؤٹ',
+        description: language === 'en'
+          ? 'The file is taking too long to process. Please try a clearer image or enter values manually.'
+          : 'فائل کو پروسیس کرنے میں بہت زیادہ وقت لگ رہا ہے۔ براہ کرم واضح تصویر آزمائیں یا قدریں دستی طور پر درج کریں۔',
+        variant: 'destructive'
+      });
+    }, 90000); // 90 second timeout
+
     try {
       console.log(`Processing ${fileType} file: ${file.name} for ${testType} test using Google Cloud Vision`);
-      
+
       let ocrResult;
-      
+
       // Use Google Cloud Vision OCR
       if (fileType === 'pdf') {
         console.log('Starting PDF processing with Google Vision...');
@@ -112,90 +127,96 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
         ocrResult = await processImageWithVision(file);
         console.log('Image processing completed, confidence:', ocrResult.confidence);
       }
-      
+
+      // Clear the timeout since we succeeded
+      clearTimeout(processingTimeout);
+
       console.log('OCR Text length:', ocrResult.text.length);
       console.log('OCR Text preview:', ocrResult.text.substring(0, 500));
-      
+
       if (ocrResult.confidence < 60) {
         console.warn('Low OCR confidence:', ocrResult.confidence);
         toast({
           title: language === 'en' ? 'Low Quality Scan' : 'کم معیار کی اسکین',
           description: language === 'en'
-            ? 'The scan quality is low. Results may not be accurate.'
-            : 'اسکین کا معیار کم ہے۔ نتائج درست نہیں ہوسکتے ہیں۔',
+            ? 'The scan quality is low. Results may not be accurate. Please verify the extracted values.'
+            : 'اسکین کا معیار کم ہے۔ نتائج درست نہیں ہوسکتے ہیں۔ براہ کرم نکالی گئی قدروں کی تصدیق کریں۔',
           variant: 'default'
         });
       }
-      
+
       console.log(`Starting ${testType} data extraction...`);
-      
+
       let extractedData;
       let formData;
-      
+
       if (testType === 'cbc') {
         extractedData = extractCBCData(ocrResult.text);
         console.log('Extracted CBC data:', extractedData);
-        
+
         if (extractedData.parameters.length === 0) {
+          clearTimeout(processingTimeout);
           setErrorMessage(language === 'en'
-            ? 'Could not extract CBC parameters from the file. Please try uploading a clearer scan or enter values manually.'
-            : 'فائل سے CBC پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔');
-          
+            ? 'Could not extract CBC parameters from the file. The scan may be unclear or in an unsupported format. Please try uploading a clearer scan or enter values manually.'
+            : 'فائل سے CBC پیرامیٹرز حاصل نہیں کرسکا۔ اسکین غیر واضح ہو سکتی ہے یا غیر تعاون یافتہ فارمیٹ میں۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔');
+
           toast({
             title: language === 'en' ? 'No Data Found' : 'کوئی ڈیٹا نہیں ملا',
             description: language === 'en'
-              ? 'Could not extract CBC parameters from the file. Please try uploading a clearer scan or enter values manually.'
-              : 'فائل سے CBC پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔',
+              ? 'Could not extract CBC parameters. Please ensure the scan is clear and properly oriented, or enter values manually.'
+              : 'CBC پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم یقینی بنائیں کہ اسکین واضح اور صحیح جہت میں ہے، یا قدریں دستی طور پر درج کریں۔',
             variant: 'destructive'
           });
           return;
         }
-        
+
         console.log('Converting CBC to form data...');
         formData = convertToCBCFormData(extractedData, parameters as CBCParameter[]);
       } else {
         extractedData = extractBloodTestData(ocrResult.text, testType as 'lipid' | 'glucose' | 'thyroid');
         console.log('Extracted blood test data:', extractedData);
-        
+
         if (extractedData.parameters.length === 0) {
+          clearTimeout(processingTimeout);
           setErrorMessage(language === 'en'
-            ? `Could not extract ${testType} parameters from the file. Please try uploading a clearer scan or enter values manually.`
-            : `فائل سے ${testType} پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔`);
-          
+            ? `Could not extract ${testType} parameters from the file. The scan may be unclear or in an unsupported format. Please try uploading a clearer scan or enter values manually.`
+            : `فائل سے ${testType} پیرامیٹرز حاصل نہیں کرسکا۔ اسکین غیر واضح ہو سکتی ہے یا غیر تعاون یافتہ فارمیٹ میں۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔`);
+
           toast({
             title: language === 'en' ? 'No Data Found' : 'کوئی ڈیٹا نہیں ملا',
             description: language === 'en'
-              ? `Could not extract ${testType} parameters from the file. Please try uploading a clearer scan or enter values manually.`
-              : `فائل سے ${testType} پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم واضح اسکین اپلوڈ کریں یا قدریں دستی طور پر درج کریں۔`,
+              ? `Could not extract ${testType} parameters. Please ensure the scan is clear, or enter values manually.`
+              : `${testType} پیرامیٹرز حاصل نہیں کرسکا۔ براہ کرم یقینی بنائیں کہ اسکین واضح ہے، یا قدریں دستی طور پر درج کریں۔`,
             variant: 'destructive'
           });
           return;
         }
-        
+
         console.log('Converting to form data...');
         formData = convertToBloodTestFormData(extractedData, parameters as BloodTestParameter[], testType as 'lipid' | 'glucose' | 'thyroid');
       }
-      
+
       console.log('Form data ready:', formData);
-      
+
       onExtracted(formData);
-      
+
       toast({
         title: language === 'en' ? 'Report Processed Successfully' : 'رپورٹ کامیابی سے پروسیس کی گئی',
         description: language === 'en'
-          ? `Extracted ${extractedData.parameters.length} parameters with Google Cloud Vision AI. Please verify the values before analysis.`
-          : `${extractedData.parameters.length} پیرامیٹرز گوگل کلاؤڈ ویژن AI کے ساتھ نکالے گئے۔ براہ کرم تجزیہ سے پہلے قدروں کی تصدیق کریں۔`,
+          ? `Extracted ${extractedData.parameters.length} parameters with AI-powered OCR. Please verify the values before analysis.`
+          : `${extractedData.parameters.length} پیرامیٹرز AI سے چلنے والے OCR کے ساتھ نکالے گئے۔ براہ کرم تجزیہ سے پہلے قدروں کی تصدیق کریں۔`,
         variant: 'default'
       });
-      
+
     } catch (error) {
+      clearTimeout(processingTimeout);
       console.error('Error processing file:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      
+
       setErrorMessage(language === 'en'
-        ? `Failed to process the file: ${errorMsg}. Please try again or enter values manually.`
-        : 'فائل کو پروسیس کرنے میں ناکام۔ براہ کرم دوبارہ کوشش کریں یا قدریں دستی طور پر درج کریں۔');
-      
+        ? `Failed to process the file: ${errorMsg}. Please try again with a clearer scan or enter values manually.`
+        : 'فائل کو پروسیس کرنے میں ناکام۔ براہ کرم واضح اسکین کے ساتھ دوبارہ کوشش کریں یا قدریں دستی طور پر درج کریں۔');
+
       toast({
         title: language === 'en' ? 'Processing Error' : 'پروسیسنگ میں خرابی',
         description: language === 'en'
@@ -204,6 +225,7 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
         variant: 'destructive'
       });
     } finally {
+      clearTimeout(processingTimeout);
       setIsProcessing(false);
     }
   };
@@ -215,8 +237,8 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
           {language === 'en' ? `Upload ${getTestTypeTitle()}` : `${getTestTypeTitle()} اپلوڈ کریں`}
         </CardTitle>
         <CardDescription>
-          {language === 'en' 
-            ? `Upload your ${testType} test report as PDF or image for AI-powered extraction with Google Cloud Vision` 
+          {language === 'en'
+            ? `Upload your ${testType} test report as PDF or image for AI-powered extraction with Google Cloud Vision`
             : `گوگل کلاؤڈ ویژن کے ساتھ AI سے چلنے والے استخراج کے لیے اپنی ${testType} ٹیسٹ رپورٹ پی ڈی ایف یا تصویر کے طور پر اپلوڈ کریں`}
         </CardDescription>
       </CardHeader>
@@ -230,7 +252,7 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
               {language === 'en' ? 'Image Upload' : 'تصویر اپلوڈ'}
             </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="pdf" className="mt-4">
             <div className="flex flex-col items-center justify-center w-full">
               <label htmlFor="pdf-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors">
@@ -239,8 +261,8 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
                     <>
                       <Upload className="h-10 w-10 text-muted-foreground mb-2" />
                       <p className="text-sm text-muted-foreground">
-                        {language === 'en' 
-                          ? 'Click to upload or drag and drop' 
+                        {language === 'en'
+                          ? 'Click to upload or drag and drop'
                           : 'اپلوڈ کرنے کے لیے کلک کریں یا کھینچ کر چھوڑیں'}
                       </p>
                       <p className="text-xs text-muted-foreground/70 mt-1">PDF (MAX. 10MB)</p>
@@ -255,18 +277,18 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
                     </>
                   )}
                 </div>
-                <input 
-                  id="pdf-upload" 
-                  type="file" 
-                  accept=".pdf" 
-                  className="hidden" 
-                  onChange={(e) => handleFileChange(e, 'pdf')} 
+                <input
+                  id="pdf-upload"
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={(e) => handleFileChange(e, 'pdf')}
                   disabled={isProcessing}
                 />
               </label>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="image" className="mt-4">
             <div className="flex flex-col items-center justify-center w-full">
               <label htmlFor="image-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors">
@@ -275,8 +297,8 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
                     <>
                       <FileImage className="h-10 w-10 text-muted-foreground mb-2" />
                       <p className="text-sm text-muted-foreground">
-                        {language === 'en' 
-                          ? `Upload ${testType} test report image` 
+                        {language === 'en'
+                          ? `Upload ${testType} test report image`
                           : `${testType} ٹیسٹ رپورٹ کی تصویر اپلوڈ کریں`}
                       </p>
                       <p className="text-xs text-muted-foreground/70 mt-1">JPG, PNG (MAX. 10MB)</p>
@@ -291,12 +313,12 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
                     </>
                   )}
                 </div>
-                <input 
-                  id="image-upload" 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={(e) => handleFileChange(e, 'image')} 
+                <input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleFileChange(e, 'image')}
                   disabled={isProcessing}
                 />
               </label>
@@ -312,10 +334,10 @@ const PDFUploader = ({ language, parameters, onExtracted, testType }: PDFUploade
             </AlertDescription>
           </Alert>
         )}
-        
-        <Button 
-          onClick={handleProcess} 
-          disabled={!file || isProcessing} 
+
+        <Button
+          onClick={handleProcess}
+          disabled={!file || isProcessing}
           className="w-full"
           variant={file ? "default" : "outline"}
         >

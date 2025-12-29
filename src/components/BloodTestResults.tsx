@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { BloodTestAnalysis } from '@/types/blood-test.types';
 import { AlertTriangle, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import MedicalDisclaimer from './MedicalDisclaimer';
 
 interface BloodTestResultsProps {
   analysis: BloodTestAnalysis;
@@ -59,6 +60,8 @@ const BloodTestResults = ({ analysis, language }: BloodTestResultsProps) => {
 
   return (
     <div className="space-y-6">
+      <MedicalDisclaimer language={language} variant="inline" className="mb-4" />
+
       {/* Overall Summary */}
       <Card>
         <CardHeader>
@@ -74,16 +77,16 @@ const BloodTestResults = ({ analysis, language }: BloodTestResultsProps) => {
                 {language === 'en' ? analysis.summary.en : analysis.summary.ur}
               </AlertDescription>
             </Alert>
-            
+
             <div className="flex items-center space-x-4">
               <span className="text-sm font-medium">
                 {language === 'en' ? 'Overall Risk Level:' : 'مجموعی خطرے کی سطح:'}
               </span>
               <Badge className={getRiskColor(analysis.overallRisk)}>
-                {language === 'en' ? analysis.overallRisk.toUpperCase() : 
+                {language === 'en' ? analysis.overallRisk.toUpperCase() :
                   analysis.overallRisk === 'low' ? 'کم' :
-                  analysis.overallRisk === 'moderate' ? 'متوسط' :
-                  analysis.overallRisk === 'high' ? 'زیادہ' : 'تشویشناک'
+                    analysis.overallRisk === 'moderate' ? 'متوسط' :
+                      analysis.overallRisk === 'high' ? 'زیادہ' : 'تشویشناک'
                 }
               </Badge>
             </div>
@@ -103,17 +106,17 @@ const BloodTestResults = ({ analysis, language }: BloodTestResultsProps) => {
                 <div className="flex items-center space-x-2">
                   {getStatusIcon(result.status)}
                   <Badge variant="outline" className={getStatusColor(result.status) + ' text-white'}>
-                    {language === 'en' ? result.status.replace('-', ' ').toUpperCase() : 
+                    {language === 'en' ? result.status.replace('-', ' ').toUpperCase() :
                       result.status === 'normal' ? 'معمول' :
-                      result.status === 'low' ? 'کم' :
-                      result.status === 'high' ? 'زیادہ' :
-                      result.status === 'critical-low' ? 'تشویشناک کم' : 'تشویشناک زیادہ'
+                        result.status === 'low' ? 'کم' :
+                          result.status === 'high' ? 'زیادہ' :
+                            result.status === 'critical-low' ? 'تشویشناک کم' : 'تشویشناک زیادہ'
                     }
                   </Badge>
                 </div>
               </div>
             </CardHeader>
-            
+
             <CardContent className="space-y-4">
               {/* Value and Reference Range */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -144,8 +147,8 @@ const BloodTestResults = ({ analysis, language }: BloodTestResultsProps) => {
                     </span>
                     <span>{Math.abs(result.deviation).toFixed(1)}%</span>
                   </div>
-                  <Progress 
-                    value={Math.min(Math.abs(result.deviation), 100)} 
+                  <Progress
+                    value={Math.min(Math.abs(result.deviation), 100)}
                     className="h-2"
                   />
                 </div>

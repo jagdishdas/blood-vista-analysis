@@ -10,7 +10,7 @@ export interface ChatMessage {
 
 export interface AIResponse {
   content: string;
-  provider: AIProvider;
+  provider?: AIProvider;
   error?: string;
 }
 
@@ -29,11 +29,8 @@ const getApiEndpoint = (path: string): string => {
   const apiUrl = import.meta.env.VITE_API_URL;
   if (apiUrl) return `${apiUrl}/api/${path}`;
 
-  // In production builds (e.g. Vercel + custom domains), use same-origin API routes
-  if (import.meta.env.PROD) return `/api/${path}`;
-
-  // In local dev / Lovable preview, fall back to backend functions
-  return `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bloodvista-${path}`;
+  // Always use /api/ route (works in both production and development with Vite proxy)
+  return `/api/${path}`;
 };
 
 // Send chat request through the API
@@ -43,22 +40,16 @@ export const sendChatMessage = async (
 ): Promise<AIResponse> => {
   const provider = getAIProvider();
   const endpoint = getApiEndpoint('chat');
-  const isSupabase = endpoint.includes('supabase');
-  
+
   try {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    
-    // Only add auth header for Supabase
-    if (isSupabase) {
-      headers['Authorization'] = `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`;
-    }
-    
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         messages,
         provider,
         stream: !!onStream
@@ -67,7 +58,7 @@ export const sendChatMessage = async (
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      
+
       if (response.status === 429) {
         return {
           content: '',
@@ -75,7 +66,7 @@ export const sendChatMessage = async (
           error: 'Rate limit exceeded. Please wait a moment and try again.'
         };
       }
-      
+
       if (response.status === 402) {
         return {
           content: '',
@@ -83,11 +74,11 @@ export const sendChatMessage = async (
           error: 'AI service quota exceeded. Please try again later.'
         };
       }
-      
+
       return {
         content: '',
         provider,
-        error: errorData.error || 'Failed to get AI response'
+        error: errorData.error || 'Failed to get AI response. Please check your API keys are configured correctly.'
       };
     }
 
@@ -147,14 +138,14 @@ export const sendChatMessage = async (
 
     return {
       content,
-      provider: (provider ?? 'openai') as AIProvider,
+      provider: data.provider || provider,
     };
   } catch (error) {
     console.error('AI Client error:', error);
     return {
       content: '',
       provider,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
+      error: error instanceof Error ? error.message : 'Network error. Please check your internet connection and try again.'
     };
   }
 };

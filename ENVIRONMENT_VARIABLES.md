@@ -8,11 +8,19 @@ Set these in your Vercel project dashboard: `https://vercel.com/<your-project>/s
 
 ### Required Variables
 
-#### `OPENAI_API_KEY`
-- **Purpose**: Powers AI-driven chat assistant and radiology analysis
+#### `GEMINI_API_KEY` (Recommended)
+- **Purpose**: Powers AI-driven chat assistant and analysis (Primary AI provider)
+- **Format**: `AIzaSy...` (Google AI Studio API key)
+- **How to get**: Create at https://aistudio.google.com/app/apikey
+- **Required for**: Chat feature
+- **Note**: If both GEMINI_API_KEY and OPENAI_API_KEY are set, Gemini will be tried first with automatic fallback to OpenAI
+
+#### `OPENAI_API_KEY` (Alternative/Fallback)
+- **Purpose**: Powers AI-driven chat assistant (Fallback AI provider)
 - **Format**: `sk-...` (OpenAI API key)
 - **How to get**: Create at https://platform.openai.com/api-keys
-- **Required for**: Chat feature, Radiology analysis
+- **Required for**: Chat feature (if GEMINI_API_KEY not set)
+- **Note**: You can set both keys for automatic fallback
 
 #### `VITE_SUPABASE_URL`
 - **Purpose**: Supabase project URL for database and edge functions
@@ -31,11 +39,16 @@ Set these in your Vercel project dashboard: `https://vercel.com/<your-project>/s
 1. Go to your Vercel project dashboard
 2. Navigate to **Settings** → **Environment Variables**
 3. Add each variable:
-   - **Key**: Variable name (e.g., `OPENAI_API_KEY`)
+   - **Key**: Variable name (e.g., `GEMINI_API_KEY`)
    - **Value**: The actual value
    - **Environments**: Select Production, Preview, and Development
 4. Click **Save**
 5. Redeploy your application for changes to take effect
+
+**Recommended Setup**:
+- Set `GEMINI_API_KEY` for the chat feature (recommended - free tier available)
+- Optionally set `OPENAI_API_KEY` as fallback
+- Set both Supabase variables (`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`)
 
 ---
 
@@ -132,8 +145,18 @@ supabase secrets set GOOGLE_CLOUD_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIE
 
 ### Common Issues
 
-**Issue: "OPENAI_API_KEY not configured"**
-- **Solution**: Ensure `OPENAI_API_KEY` is set in Vercel and redeploy
+**Issue: "No AI API keys configured"**
+- **Solution**: Set either `GEMINI_API_KEY` (recommended) or `OPENAI_API_KEY` in Vercel
+- **Recommended**: Use Gemini API - it has a generous free tier
+- **Get Gemini Key**: https://aistudio.google.com/app/apikey
+- After setting, redeploy your application
+
+**Issue: "Gemini API error" or "OpenAI API error"**
+- **Solution**: 
+  - Verify the API key is correct and active
+  - Check if you have quota/credits remaining
+  - If using both keys, the system will automatically try the fallback
+  - Gemini free tier: 15 requests per minute, 1500 per day
 
 **Issue: "Google Cloud credentials not configured"**
 - **Solution**: Check all three Google Cloud secrets are set in Supabase

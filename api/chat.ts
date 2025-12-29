@@ -1,5 +1,3 @@
-// Converted to Node.js serverless function for better reliability
-// Prevents timeout issues with long AI responses and streaming
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -70,52 +68,41 @@ export default async function handler(req: Request): Promise<Response> {
       });
     }
 
-    const apiKey = (process.env.OPENAI_API_KEY || '').trim();
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'OPENAI_API_KEY not configured' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Get API keys from environment
+    const geminiApiKey = (process.env.GEMINI_API_KEY || '').trim();
+    const openaiApiKey = (process.env.OPENAI_API_KEY || '').trim();
+
+    // Try Gemini first if available, then fall back to OpenAI
+    if (geminiApiKey) {
+      try {
+        console.log('Attempting to use Gemini API...');
+        const geminiResponse = await callGeminiAPI(geminiApiKey, messages);
+        return geminiResponse;
+      } catch (geminiError) {
+        console.error('Gemini API failed:', geminiError);
+        // Fall through to OpenAI
+        if (!openaiApiKey) {
+          throw geminiError; // If no OpenAI key, throw the original error
+        }
+        console.log('Falling back to OpenAI API...');
+      }
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-        max_tokens: 1024,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, errorText);
-      return new Response(JSON.stringify({ error: 'AI service error' }), {
-        status: response.status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Use OpenAI API
+    if (openaiApiKey) {
+      console.log('Using OpenAI API...');
+      const openaiResponse = await callOpenAIAPI(openaiApiKey, messages);
+      return openaiResponse;
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '';
-
-    if (!content) {
-      return new Response(JSON.stringify({
-        error: 'No response generated. Please try rephrasing your question or try again.'
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    return new Response(JSON.stringify({ content, provider: 'openai' }), {
-      status: 200,
+    // No API keys configured
+    return new Response(JSON.stringify({
+      error: 'No AI API keys configured. Please set either GEMINI_API_KEY or OPENAI_API_KEY in your environment variables.'
+    }), {
+      status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
   } catch (error) {
     console.error('Chat error:', error);
 
@@ -140,4 +127,106 @@ export default async function handler(req: Request): Promise<Response> {
       },
     );
   }
+}
+
+// Call Gemini API
+async function callGeminiAPI(apiKey: string, messages: any[]): Promise<Response> {
+  // Convert messages to Gemini format
+  const geminiMessages = messages
+    .filter(m => m.role !== 'system')
+    .map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
+  // Add system message as first user message if exists
+  const systemMessage = messages.find(m => m.role === 'system');
+  if (systemMessage) {
+    geminiMessages.unshift({
+      role: 'user',
+      parts: [{ text: systemMessage.content }]
+    });
+    geminiMessages.splice(1, 0, {
+      role: 'model',
+      parts: [{ text: 'I understand. I will follow these guidelines in all my responses.' }]
+    });
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: geminiMessages,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Gemini API error:', response.status, errorText);
+    throw new Error(`Gemini API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+  if (!content) {
+    throw new Error('No response generated from Gemini. Please try rephrasing your question.');
+  }
+
+  return new Response(JSON.stringify({ content, provider: 'gemini' }), {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+// Call OpenAI API
+async function callOpenAIAPI(apiKey: string, messages: any[]): Promise<Response> {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
+      max_tokens: 1024,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('OpenAI API error:', response.status, errorText);
+
+    if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+    }
+
+    if (response.status === 402) {
+      throw new Error('AI service quota exceeded. Please try again later.');
+    }
+
+    throw new Error('OpenAI API error');
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content || '';
+
+  if (!content) {
+    throw new Error('No response generated from OpenAI. Please try rephrasing your question.');
+  }
+
+  return new Response(JSON.stringify({ content, provider: 'openai' }), {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }

@@ -32,12 +32,12 @@ const Index = () => {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
+
         // Redirect to auth if not logged in
         if (!session?.user && !loading) {
           navigate('/auth');
         }
-        
+
         setLoading(false);
       }
     );
@@ -46,11 +46,11 @@ const Index = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      
+
       if (!session?.user) {
         navigate('/auth');
       }
-      
+
       setLoading(false);
     });
 
@@ -61,14 +61,14 @@ const Index = () => {
     try {
       const results = analyzeCBC(data);
       setAnalysis(results);
-      
+
       toast({
         title: language === "en" ? "Analysis Complete" : "تجزیہ مکمل",
-        description: language === "en" 
+        description: language === "en"
           ? "Your CBC results have been analyzed successfully."
           : "آپ کے سی بی سی نتائج کا کامیابی سے تجزیہ کیا گیا ہے۔",
       });
-      
+
       setTimeout(() => {
         document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
@@ -88,14 +88,14 @@ const Index = () => {
     try {
       const results = analyzeBloodTest(data);
       setAnalysis(results);
-      
+
       toast({
         title: language === "en" ? "Analysis Complete" : "تجزیہ مکمل",
-        description: language === "en" 
+        description: language === "en"
           ? "Your blood test results have been analyzed successfully."
           : "آپ کے خون کے ٹیسٹ کے نتائج کا کامیابی سے تجزیہ کیا گیا ہے۔",
       });
-      
+
       setTimeout(() => {
         document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
@@ -153,12 +153,13 @@ const Index = () => {
 
   const renderResults = () => {
     if (!analysis) return null;
-    
-    // Check if it's CBC analysis (has cbcCategory) or blood test analysis (has testType)
-    if (analysis.cbcCategory) {
-      return <CBCResults analysis={analysis} language={language} />;
-    } else {
+
+    // Check if it's blood test analysis (has testType) or CBC analysis
+    // BloodTestAnalysis has testType property, CBCAnalysis doesn't
+    if (analysis.testType) {
       return <BloodTestResults analysis={analysis} language={language} />;
+    } else {
+      return <CBCResults analysis={analysis} language={language} />;
     }
   };
 
@@ -181,7 +182,7 @@ const Index = () => {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header language={language} setLanguage={setLanguage} />
       <Toaster />
-      
+
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8">
@@ -189,21 +190,21 @@ const Index = () => {
               {language === "en" ? "BloodVista - Comprehensive Blood Test Analyzer" : "بلڈ وسٹا - جامع خون کا ٹیسٹ تجزیہ کار"}
             </h1>
             <p className="text-lg text-gray-600 max-w-4xl mx-auto">
-              {language === "en" 
+              {language === "en"
                 ? "Upload your blood test report PDF or image, or enter parameters manually for professional analysis and interpretation across multiple test categories"
                 : "پیشہ ورانہ تجزیہ اور تشریح کے لیے اپنی خون کے ٹیسٹ کی رپورٹ پی ڈی ایف یا تصویر اپلوڈ کریں یا مختلف ٹیسٹ کیٹگریز میں پیرامیٹرز کو دستی طور پر درج کریں"
               }
             </p>
           </div>
-          
-          <TestCategorySelector 
+
+          <TestCategorySelector
             language={language}
             selectedCategory={selectedTestCategory}
             onCategorySelect={handleCategorySelect}
           />
-          
+
           {renderTestForm()}
-          
+
           {analysis && (
             <div id="results-section" className="mt-8">
               {renderResults()}
@@ -211,7 +212,7 @@ const Index = () => {
           )}
         </div>
       </main>
-      
+
       <Footer language={language} />
     </div>
   );

@@ -1,7 +1,5 @@
-export const config = {
-  runtime: 'edge',
-};
-
+// Converted to Node.js serverless function for better reliability
+// Prevents timeout issues with long AI responses and streaming
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',

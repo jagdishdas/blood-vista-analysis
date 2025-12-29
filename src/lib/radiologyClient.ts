@@ -45,19 +45,19 @@ export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 // Validate file type and size
 export function validateFile(file: File): { valid: boolean; error?: string } {
   if (!SUPPORTED_FILE_TYPES.includes(file.type) && !file.name.toLowerCase().endsWith('.dcm')) {
-    return { 
-      valid: false, 
-      error: 'Unsupported file type. Please upload JPG, PNG, WebP, or DICOM files.' 
+    return {
+      valid: false,
+      error: 'Unsupported file type. Please upload JPG, PNG, WebP, or DICOM files.'
     };
   }
-  
+
   if (file.size > MAX_FILE_SIZE) {
-    return { 
-      valid: false, 
-      error: 'File size exceeds 10MB limit. Please compress the image.' 
+    return {
+      valid: false,
+      error: 'File size exceeds 10MB limit. Please compress the image.'
     };
   }
-  
+
   return { valid: true };
 }
 
@@ -72,33 +72,78 @@ export async function fileToBase64(file: File): Promise<string> {
 }
 
 // Compress image for upload (reduces quality while maintaining diagnostic utility)
+// Iteratively compresses until file size is under target (3.5MB for safety margin)
 export async function compressImage(base64: string, maxWidth = 1920): Promise<string> {
+  const TARGET_SIZE_MB = 3.5; // Safety margin below 4.5MB serverless limit
+  const TARGET_SIZE_BYTES = TARGET_SIZE_MB * 1024 * 1024;
+
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let width = img.width;
-      let height = img.height;
-      
-      // Scale down if too large
-      if (width > maxWidth) {
-        height = (height * maxWidth) / width;
-        width = maxWidth;
-      }
-      
-      canvas.width = width;
-      canvas.height = height;
-      
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error('Could not get canvas context'));
+      let compressed = base64;
+      let currentSize = new Blob([atob(base64.split(',')[1])]).size;
+
+      console.log(`Original image size: ${(currentSize / 1024 / 1024).toFixed(2)}MB`);
+
+      // If already under target, return as-is
+      if (currentSize <= TARGET_SIZE_BYTES) {
+        console.log('Image already under target size, no compression needed');
+        resolve(base64);
         return;
       }
-      
-      ctx.drawImage(img, 0, 0, width, height);
-      
-      // Convert to JPEG with 85% quality for good balance
-      const compressed = canvas.toDataURL('image/jpeg', 0.85);
+
+      // Compression attempts with progressive quality/size reduction
+      const compressionStrategies = [
+        { maxWidth: 1920, quality: 0.85 },
+        { maxWidth: 1920, quality: 0.70 },
+        { maxWidth: 1600, quality: 0.70 },
+        { maxWidth: 1600, quality: 0.60 },
+        { maxWidth: 1280, quality: 0.60 },
+        { maxWidth: 1280, quality: 0.50 }
+      ];
+
+      for (const strategy of compressionStrategies) {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Scale down if too large
+        if (width > strategy.maxWidth) {
+          height = (height * strategy.maxWidth) / width;
+          width = strategy.maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convert to JPEG with target quality
+        compressed = canvas.toDataURL('image/jpeg', strategy.quality);
+        currentSize = new Blob([atob(compressed.split(',')[1])]).size;
+
+        console.log(
+          `Compression attempt: ${strategy.maxWidth}px @ ${strategy.quality} quality = ${(currentSize / 1024 / 1024).toFixed(2)}MB`
+        );
+
+        // Success - under target size
+        if (currentSize <= TARGET_SIZE_BYTES) {
+          console.log(`✓ Compression successful: ${(currentSize / 1024 / 1024).toFixed(2)}MB`);
+          resolve(compressed);
+          return;
+        }
+      }
+
+      // If still too large after all attempts, return best effort with warning
+      console.warn(
+        `Warning: Could not compress below ${TARGET_SIZE_MB}MB. Final size: ${(currentSize / 1024 / 1024).toFixed(2)}MB`
+      );
       resolve(compressed);
     };
     img.onerror = () => reject(new Error('Failed to load image for compression'));
@@ -138,16 +183,16 @@ export async function analyzeRadiologyImage(
   fileName: string
 ): Promise<AnalysisResult> {
   const { url, useSupabase } = getRadiologyEndpoint();
-  
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  
+
   // Add auth header for Supabase
   if (useSupabase) {
     headers['Authorization'] = `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`;
   }
-  
+
   const response = await fetch(url, {
     method: 'POST',
     headers,
@@ -165,7 +210,7 @@ export async function analyzeRadiologyImage(
   }
 
   const data = await response.json();
-  
+
   if (data.error) {
     throw new Error(data.error);
   }
@@ -180,7 +225,7 @@ export async function saveScanToStorage(
   scanType: ScanType
 ): Promise<string> {
   const fileName = `${userId}/${Date.now()}-${file.name}`;
-  
+
   const { error: uploadError } = await supabase.storage
     .from('radiology-scans')
     .upload(fileName, file, {

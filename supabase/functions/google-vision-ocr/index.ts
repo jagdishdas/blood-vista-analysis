@@ -68,8 +68,11 @@ async function getAccessToken(jwt: string): Promise<string> {
 
   if (!response.ok) {
     const error = await response.text();
-    console.error("Token exchange failed:", error);
-    throw new Error(`Failed to get access token: ${error}`);
+    console.error("Token exchange failed with status:", response.status);
+    console.error("Error response:", error);
+    console.error("JWT length:", jwt.length);
+    console.error("Response headers:", Object.fromEntries(response.headers.entries()));
+    throw new Error(`Failed to get access token (HTTP ${response.status}): ${error.substring(0, 200)}`);
   }
 
   const data = await response.json();
@@ -138,15 +141,47 @@ serve(async (req) => {
       );
     }
 
-    // Fix escaped newlines in private key
-    const formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
+    // Fix escaped newlines in private key (robust handling for env vars)
+    let formattedPrivateKey = privateKey
+      .replace(/\\n/g, '\n')   // Handle escaped newlines
+      .replace(/\\r/g, '')      // Remove escaped carriage returns
+      .trim();
+
+    // Validate private key format
+    if (!formattedPrivateKey.includes('-----BEGIN PRIVATE KEY-----') ||
+      !formattedPrivateKey.includes('-----END PRIVATE KEY-----')) {
+      console.error('Invalid private key format: Missing BEGIN/END markers');
+      console.error('Key length:', privateKey.length);
+      console.error('First 50 chars:', privateKey.substring(0, 50));
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid private key format. Ensure key includes BEGIN/END PRIVATE KEY markers.',
+          hint: 'Check that newlines are preserved in the environment variable'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     console.log("Creating JWT for service account:", clientEmail);
-    const jwt = await createJWT(clientEmail, formattedPrivateKey);
-    
+
+    let jwt: string;
+    try {
+      jwt = await createJWT(clientEmail, formattedPrivateKey);
+    } catch (error) {
+      console.error("JWT creation failed:", error);
+      console.error("Error details:", error instanceof Error ? error.message : 'Unknown error');
+      return new Response(
+        JSON.stringify({
+          error: 'Failed to create JWT for authentication',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log("Exchanging JWT for access token...");
     const accessToken = await getAccessToken(jwt);
-    
+
     console.log("Calling Google Cloud Vision API...");
     const visionResponse = await performOCR(imageBase64, accessToken);
 
@@ -156,7 +191,7 @@ serve(async (req) => {
 
     if (visionResponse.responses && visionResponse.responses[0]) {
       const response = visionResponse.responses[0];
-      
+
       // Prefer fullTextAnnotation for better structure
       if (response.fullTextAnnotation) {
         extractedText = response.fullTextAnnotation.text || "";
@@ -188,7 +223,7 @@ serve(async (req) => {
     console.log("Confidence:", confidence);
 
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         text: extractedText,
         confidence: confidence,
         success: true
@@ -199,9 +234,9 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in google-vision-ocr function:", error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: error.message,
-        success: false 
+        success: false
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

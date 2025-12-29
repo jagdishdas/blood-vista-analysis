@@ -1,7 +1,5 @@
-export const config = {
-  runtime: 'edge',
-};
-
+// Converted to Node.js serverless function for larger payload support (4.5MB+)
+// Edge runtime had 4MB limit which was insufficient for high-resolution medical scans
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',

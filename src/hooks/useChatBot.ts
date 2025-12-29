@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { 
-  sendChatMessage, 
-  getChatHistory, 
-  saveChatHistory, 
+import {
+  sendChatMessage,
+  getChatHistory,
+  saveChatHistory,
   clearChatHistory,
   generateMessageId,
   type ChatMessage,
-  type StoredMessage 
+  type StoredMessage
 } from '@/lib/aiClient';
 import { appConfig } from '@/lib/appConfig';
 
@@ -14,7 +14,15 @@ export const useChatBot = () => {
   const [messages, setMessages] = useState<StoredMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Use ref to track loading state and prevent race conditions
+  const isLoadingRef = useRef(false);
+  const processingRef = useRef(false);
+
+  // Sync ref with state
+  useEffect(() => {
+    isLoadingRef.current = isLoading;
+  }, [isLoading]);
 
   // Load chat history on mount
   useEffect(() => {
@@ -32,71 +40,98 @@ export const useChatBot = () => {
   }, [messages]);
 
   const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim() || isLoading) return;
+    const trimmedContent = content.trim();
 
+    // Prevent sending if empty, already loading, or already processing
+    if (!trimmedContent || isLoadingRef.current || processingRef.current) {
+      return;
+    }
+
+    // Set processing flag to prevent duplicate sends
+    processingRef.current = true;
+
+    // Clear any previous errors when sending new message
     setError(null);
-    
-    // Add user message
-    const userMessage: StoredMessage = {
-      id: generateMessageId(),
-      role: 'user',
-      content: content.trim(),
-      timestamp: Date.now()
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Prepare messages for API (convert StoredMessage to ChatMessage)
-    const apiMessages: ChatMessage[] = messages
-      .concat(userMessage)
-      .map(({ role, content }) => ({ role, content }));
-
     try {
-      let assistantContent = '';
+      // Create user message
+      const userMessage: StoredMessage = {
+        id: generateMessageId(),
+        role: 'user',
+        content: trimmedContent,
+        timestamp: Date.now()
+      };
+
+      // Add user message using functional update to avoid stale closure
+      setMessages(prevMessages => [...prevMessages, userMessage]);
+
+      // Create assistant placeholder
       const assistantId = generateMessageId();
-      
-      // Create placeholder for streaming
       const assistantMessage: StoredMessage = {
         id: assistantId,
         role: 'assistant',
         content: '',
         timestamp: Date.now()
       };
-      
-      setMessages(prev => [...prev, assistantMessage]);
 
-      const response = await sendChatMessage(apiMessages, (chunk) => {
-        assistantContent += chunk;
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === assistantId 
-              ? { ...msg, content: assistantContent }
+      // Add assistant placeholder
+      setMessages(prevMessages => [...prevMessages, assistantMessage]);
+
+      // Prepare API messages - get current messages from state safely
+      let apiMessages: ChatMessage[];
+      setMessages(currentMessages => {
+        // Convert to API format, excluding the empty assistant placeholder
+        apiMessages = currentMessages
+          .filter(msg => msg.id !== assistantId)
+          .map(({ role, content }) => ({ role, content }));
+        return currentMessages;
+      });
+
+      // Track streamed content
+      let streamedContent = '';
+
+      // Send to API with streaming callback
+      const response = await sendChatMessage(apiMessages!, (chunk) => {
+        streamedContent += chunk;
+        // Update assistant message with streamed content
+        setMessages(prevMessages =>
+          prevMessages.map(msg =>
+            msg.id === assistantId
+              ? { ...msg, content: streamedContent }
               : msg
           )
         );
       });
 
+      // Handle response
       if (response.error) {
         setError(response.error);
-        // Remove the empty assistant message on error
-        setMessages(prev => prev.filter(msg => msg.id !== assistantId));
-      } else if (!assistantContent && response.content) {
-        // Non-streaming response
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === assistantId 
+        // Remove the assistant placeholder on error
+        setMessages(prevMessages => prevMessages.filter(msg => msg.id !== assistantId));
+      } else if (!streamedContent && response.content) {
+        // Non-streaming response - update the placeholder with full content
+        setMessages(prevMessages =>
+          prevMessages.map(msg =>
+            msg.id === assistantId
               ? { ...msg, content: response.content }
               : msg
           )
         );
       }
     } catch (err) {
+      console.error('Send message error:', err);
       setError(err instanceof Error ? err.message : 'Failed to send message');
+
+      // Remove any empty assistant messages on error
+      setMessages(prevMessages =>
+        prevMessages.filter(msg => !(msg.role === 'assistant' && !msg.content))
+      );
     } finally {
       setIsLoading(false);
+      processingRef.current = false;
     }
-  }, [messages, isLoading]);
+  }, []); // Empty dependencies - uses refs and functional updates
 
   const clearChat = useCallback(() => {
     setMessages([]);

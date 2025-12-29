@@ -12,15 +12,15 @@ const ChatBot = () => {
   const [inputValue, setInputValue] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  
-  const { 
-    messages, 
-    isLoading, 
-    error, 
-    sendMessage, 
+
+  const {
+    messages,
+    isLoading,
+    error,
+    sendMessage,
     clearChat,
     getGreeting,
-    chatbotName 
+    chatbotName
   } = useChatBot();
 
   // Auto-scroll to bottom when messages change
@@ -85,8 +85,8 @@ const ChatBot = () => {
           "flex flex-col overflow-hidden",
           "transition-all duration-300 ease-in-out",
           "max-h-[500px] sm:max-h-[600px]",
-          isOpen 
-            ? "opacity-100 translate-y-0 scale-100" 
+          isOpen
+            ? "opacity-100 translate-y-0 scale-100"
             : "opacity-0 translate-y-4 scale-95 pointer-events-none"
         )}
       >
@@ -137,11 +137,11 @@ const ChatBot = () => {
                 message.role === 'user' && "flex-row-reverse"
               )}
             >
-              <div 
+              <div
                 className={cn(
                   "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
-                  message.role === 'user' 
-                    ? "bg-secondary" 
+                  message.role === 'user'
+                    ? "bg-secondary"
                     : "bg-primary/10"
                 )}
               >
@@ -151,11 +151,11 @@ const ChatBot = () => {
                   <Bot className="h-4 w-4 text-primary" />
                 )}
               </div>
-              <div 
+              <div
                 className={cn(
                   "rounded-2xl px-4 py-3 max-w-[85%]",
-                  message.role === 'user' 
-                    ? "bg-primary text-primary-foreground rounded-tr-sm" 
+                  message.role === 'user'
+                    ? "bg-primary text-primary-foreground rounded-tr-sm"
                     : "bg-muted text-foreground rounded-tl-sm"
                 )}
               >
@@ -165,7 +165,7 @@ const ChatBot = () => {
           ))}
 
           {/* Loading indicator */}
-          {isLoading && messages[messages.length - 1]?.role === 'user' && (
+          {isLoading && (
             <div className="flex gap-3 mb-4">
               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                 <Bot className="h-4 w-4 text-primary" />
@@ -203,8 +203,8 @@ const ChatBot = () => {
               disabled={isLoading}
               className="flex-1 bg-muted border-0 focus-visible:ring-1 focus-visible:ring-primary"
             />
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               size="icon"
               disabled={!inputValue.trim() || isLoading}
               className="shrink-0 bg-primary hover:bg-primary/90"

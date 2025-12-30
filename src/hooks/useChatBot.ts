@@ -63,7 +63,12 @@ export const useChatBot = () => {
         timestamp: Date.now()
       };
 
-      // Add user message using functional update to avoid stale closure
+      // Prepare API messages BEFORE adding any new messages
+      // Get current message history and add the new user message
+      const apiMessages: ChatMessage[] = [...messages, userMessage].map(({ role, content }) => ({ role, content }));
+
+
+      // Add user message to UI
       setMessages(prevMessages => [...prevMessages, userMessage]);
 
       // Create assistant placeholder
@@ -75,24 +80,14 @@ export const useChatBot = () => {
         timestamp: Date.now()
       };
 
-      // Add assistant placeholder
+      // Add assistant placeholder to UI
       setMessages(prevMessages => [...prevMessages, assistantMessage]);
-
-      // Prepare API messages - get current messages from state safely
-      let apiMessages: ChatMessage[];
-      setMessages(currentMessages => {
-        // Convert to API format, excluding the empty assistant placeholder
-        apiMessages = currentMessages
-          .filter(msg => msg.id !== assistantId)
-          .map(({ role, content }) => ({ role, content }));
-        return currentMessages;
-      });
 
       // Track streamed content
       let streamedContent = '';
 
       // Send to API with streaming callback
-      const response = await sendChatMessage(apiMessages!, (chunk) => {
+      const response = await sendChatMessage(apiMessages, (chunk) => {
         streamedContent += chunk;
         // Update assistant message with streamed content
         setMessages(prevMessages =>
@@ -118,7 +113,12 @@ export const useChatBot = () => {
               : msg
           )
         );
+      } else if (!streamedContent && !response.content) {
+        // No content received at all - remove placeholder and show error
+        setError('No response received from AI. Please try again.');
+        setMessages(prevMessages => prevMessages.filter(msg => msg.id !== assistantId));
       }
+      // If streamedContent exists, the message was already updated during streaming
     } catch (err) {
       console.error('Send message error:', err);
       setError(err instanceof Error ? err.message : 'Failed to send message');

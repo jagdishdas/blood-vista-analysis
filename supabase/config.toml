@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.radiology-analysis]
 verify_jwt = false
+
+[functions.blood-analysis-enhance]
+verify_jwt = false

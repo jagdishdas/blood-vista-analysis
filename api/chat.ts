@@ -59,7 +59,7 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, medicalContext } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: 'Messages array is required' }), {
@@ -76,7 +76,7 @@ export default async function handler(req: Request): Promise<Response> {
     if (geminiApiKey) {
       try {
         console.log('Attempting to use Gemini API...');
-        const geminiResponse = await callGeminiAPI(geminiApiKey, messages);
+        const geminiResponse = await callGeminiAPI(geminiApiKey, messages, medicalContext);
         return geminiResponse;
       } catch (geminiError) {
         console.error('Gemini API failed:', geminiError);
@@ -91,7 +91,7 @@ export default async function handler(req: Request): Promise<Response> {
     // Use OpenAI API
     if (openaiApiKey) {
       console.log('Using OpenAI API...');
-      const openaiResponse = await callOpenAIAPI(openaiApiKey, messages);
+      const openaiResponse = await callOpenAIAPI(openaiApiKey, messages, medicalContext);
       return openaiResponse;
     }
 
@@ -129,8 +129,41 @@ export default async function handler(req: Request): Promise<Response> {
   }
 }
 
+// Create system prompt with optional medical context injection
+function createSystemPrompt(medicalContext?: any): string {
+  let prompt = SYSTEM_PROMPT;
+
+  if (medicalContext && medicalContext.results && medicalContext.results.length > 0) {
+    prompt += `
+
+[VALIDATED MEDICAL CONTEXT - STRICT]
+The user has provided validated blood test results. You MUST respect these validated statuses:
+
+`;
+
+    medicalContext.results.forEach((result: any) => {
+      const status = result.status || 'UNKNOWN';
+      const flags = result.flags || [];
+      prompt += `- ${result.parameterId}: ${result.value} ${result.unit} (Status: ${status}${flags.includes('CRITICAL') ? ' - CRITICAL' : ''})
+`;
+    });
+
+    prompt += `
+[SAFETY RULES - NON-NEGOTIABLE]
+1. You MUST acknowledge the validated status (NORMAL/LOW/HIGH/CRITICAL) in your response.
+2. If any parameter is marked CRITICAL, you MUST emphasize immediate medical consultation.
+3. You MUST NOT contradict the validated status (e.g., if status=HIGH, don't say "levels are normal").
+4. You MUST NOT provide specific medication advice or dosages.
+5. For CRITICAL values, your tone must be serious and urgent.
+6. Always remind users to consult healthcare professionals.
+`;
+  }
+
+  return prompt;
+}
+
 // Call Gemini API
-async function callGeminiAPI(apiKey: string, messages: any[]): Promise<Response> {
+async function callGeminiAPI(apiKey: string, messages: any[], medicalContext?: any): Promise<Response> {
   // Convert messages to Gemini format
   const geminiMessages = messages
     .filter(m => m.role !== 'system')
@@ -139,18 +172,16 @@ async function callGeminiAPI(apiKey: string, messages: any[]): Promise<Response>
       parts: [{ text: m.content }]
     }));
 
-  // Add system message as first user message if exists
-  const systemMessage = messages.find(m => m.role === 'system');
-  if (systemMessage) {
-    geminiMessages.unshift({
-      role: 'user',
-      parts: [{ text: systemMessage.content }]
-    });
-    geminiMessages.splice(1, 0, {
-      role: 'model',
-      parts: [{ text: 'I understand. I will follow these guidelines in all my responses.' }]
-    });
-  }
+  // Add system message with medical context as first user message
+  const systemPrompt = createSystemPrompt(medicalContext);
+  geminiMessages.unshift({
+    role: 'user',
+    parts: [{ text: systemPrompt }]
+  });
+  geminiMessages.splice(1, 0, {
+    role: 'model',
+    parts: [{ text: 'I understand. I will strictly follow these guidelines and respect all validated medical data in my responses.' }]
+  });
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
@@ -189,7 +220,7 @@ async function callGeminiAPI(apiKey: string, messages: any[]): Promise<Response>
 }
 
 // Call OpenAI API
-async function callOpenAIAPI(apiKey: string, messages: any[]): Promise<Response> {
+async function callOpenAIAPI(apiKey: string, messages: any[], medicalContext?: any): Promise<Response> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -198,7 +229,7 @@ async function callOpenAIAPI(apiKey: string, messages: any[]): Promise<Response>
     },
     body: JSON.stringify({
       model: 'gpt-4o-mini',
-      messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
+      messages: [{ role: 'system', content: createSystemPrompt(medicalContext) }, ...messages],
       max_tokens: 1024,
     }),
   });

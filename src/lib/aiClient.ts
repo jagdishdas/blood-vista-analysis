@@ -1,3 +1,4 @@
+import { supabase } from '@/integrations/supabase/client';
 // Provider-agnostic AI Client abstraction layer
 // Supports multiple AI providers configured via environment variables
 
@@ -23,43 +24,30 @@ export const getAIProvider = (): AIProvider | undefined => {
   return undefined; // Let backend auto-detect based on available API keys
 };
 
-// Determine the API endpoint based on environment
-const getApiEndpoint = (path: string): string => {
-  // Explicit override (useful for calling a separate API host)
-  const apiUrl = import.meta.env.VITE_API_URL;
-  if (apiUrl) return `${apiUrl}/api/${path}`;
 
-  // Always use /api/ route (works in both production and development with Vite proxy)
-  return `/api/${path}`;
-};
 
-// Send chat request through the API
+// Send chat request through Supabase Edge Function
 export const sendChatMessage = async (
   messages: ChatMessage[],
   onStream?: (chunk: string) => void
 ): Promise<AIResponse> => {
   const provider = getAIProvider();
-  const endpoint = getApiEndpoint('chat');
 
   try {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
+    // Call Supabase Edge Function
+    const { data, error } = await supabase.functions.invoke('bloodvista-chat', {
+      body: {
         messages,
         provider,
         stream: !!onStream
-      }),
+      }
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+    if (error) {
+      console.error('Supabase function error:', error);
 
-      if (response.status === 429) {
+      // Handle specific error types
+      if (error.message?.includes('rate limit')) {
         return {
           content: '',
           provider,
@@ -67,7 +55,7 @@ export const sendChatMessage = async (
         };
       }
 
-      if (response.status === 402) {
+      if (error.message?.includes('quota')) {
         return {
           content: '',
           provider,
@@ -78,67 +66,22 @@ export const sendChatMessage = async (
       return {
         content: '',
         provider,
-        error: errorData.error || 'Failed to get AI response. Please check your API keys are configured correctly.'
+        error: error.message || 'Failed to get AI response. Please check your Supabase configuration.'
       };
     }
 
-    const contentType = response.headers.get('content-type') || '';
-    const isEventStream = contentType.includes('text/event-stream');
+    // Handle successful response
+    const content = data?.content || '';
 
-    // Handle streaming response (SSE)
-    if (onStream && isEventStream && response.body) {
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = '';
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        // Process SSE lines
-        let newlineIndex: number;
-        while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
-          let line = buffer.slice(0, newlineIndex);
-          buffer = buffer.slice(newlineIndex + 1);
-
-          if (line.endsWith('\r')) line = line.slice(0, -1);
-          if (line.startsWith(':') || line.trim() === '') continue;
-          if (!line.startsWith('data: ')) continue;
-
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === '[DONE]') break;
-
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const delta = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (delta) {
-              fullContent += delta;
-              onStream(delta);
-            }
-          } catch {
-            // Incomplete JSON, put back in buffer
-            buffer = line + '\n' + buffer;
-            break;
-          }
-        }
-      }
-
-      return { content: fullContent, provider: (provider ?? 'openai') as AIProvider };
+    // If caller requested streaming, emit the full content once
+    // Note: Supabase functions don't support true streaming yet
+    if (onStream && content) {
+      onStream(content);
     }
-
-    // Non-streaming response (JSON)
-    const data = await response.json();
-    const content = data.content || data.choices?.[0]?.message?.content || '';
-
-    // If caller requested streaming but server returned JSON, emit once
-    if (onStream && content) onStream(content);
 
     return {
       content,
-      provider: data.provider || provider,
+      provider: data?.provider || provider,
     };
   } catch (error) {
     console.error('AI Client error:', error);

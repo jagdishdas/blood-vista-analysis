@@ -1,3 +1,8 @@
+/**
+ * UPDATED DATABASE TYPES
+ * Generated from Supabase schema
+ */
+
 export type Json =
   | string
   | number
@@ -6,14 +11,223 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
-  }
+export interface Database {
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          id: string
+          full_name: string | null
+          date_of_birth: string
+          sex: 'male' | 'female' | 'other'
+          pregnancy_status: boolean
+          pregnancy_trimester: number | null
+          chronic_conditions: string[]
+          allergies: string[]
+          current_medications: string[]
+          family_history: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          full_name?: string | null
+          date_of_birth: string
+          sex: 'male' | 'female' | 'other'
+          pregnancy_status?: boolean
+          pregnancy_trimester?: number | null
+          chronic_conditions?: string[]
+          allergies?: string[]
+          current_medications?: string[]
+          family_history?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          full_name?: string | null
+          date_of_birth?: string
+          sex?: 'male' | 'female' | 'other'
+          pregnancy_status?: boolean
+          pregnancy_trimester?: number | null
+          chronic_conditions?: string[]
+          allergies?: string[]
+          current_medications?: string[]
+          family_history?: Json
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      blood_tests: {
+        Row: {
+          id: string
+          user_id: string
+          test_type: string
+          test_date: string
+          lab_name: string | null
+          overall_risk: 'low' | 'moderate' | 'high' | 'critical' | null
+          has_critical_values: boolean
+          summary_en: string | null
+          summary_ur: string | null
+          relationship_flags: string[]
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          test_type: string
+          test_date: string
+          lab_name?: string | null
+          overall_risk?: 'low' | 'moderate' | 'high' | 'critical' | null
+          has_critical_values?: boolean
+          summary_en?: string | null
+          summary_ur?: string | null
+          relationship_flags?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          test_type?: string
+          test_date?: string
+          lab_name?: string | null
+          overall_risk?: 'low' | 'moderate' | 'high' | 'critical' | null
+          has_critical_values?: boolean
+          summary_en?: string | null
+          summary_ur?: string | null
+          relationship_flags?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      test_parameters: {
+        Row: {
+          id: string
+          test_id: string
+          parameter_id: string
+          parameter_name_en: string
+          parameter_name_ur: string | null
+          value: number
+          unit: string
+          ref_min: number
+          ref_max: number
+          status: 'NORMAL' | 'LOW' | 'HIGH' | 'CRITICAL_LOW' | 'CRITICAL_HIGH'
+          deviation: number | null
+          risk_level: 'low' | 'moderate' | 'high' | 'critical' | null
+          flags: string[]
+          interpretation_en: string | null
+          interpretation_ur: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          test_id: string
+          parameter_id: string
+          parameter_name_en: string
+          parameter_name_ur?: string | null
+          value: number
+          unit: string
+          ref_min: number
+          ref_max: number
+          status: 'NORMAL' | 'LOW' | 'HIGH' | 'CRITICAL_LOW' | 'CRITICAL_HIGH'
+          deviation?: number | null
+          risk_level?: 'low' | 'moderate' | 'high' | 'critical' | null
+          flags?: string[]
+          interpretation_en?: string | null
+          interpretation_ur?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          test_id?: string
+          parameter_id?: string
+          parameter_name_en?: string
+          parameter_name_ur?: string | null
+          value?: number
+          unit?: string
+          ref_min?: number
+          ref_max?: number
+          status?: 'NORMAL' | 'LOW' | 'HIGH' | 'CRITICAL_LOW' | 'CRITICAL_HIGH'
+          deviation?: number | null
+          risk_level?: 'low' | 'moderate' | 'high' | 'critical' | null
+          flags?: string[]
+          interpretation_en?: string | null
+          interpretation_ur?: string | null
+          created_at?: string
+        }
+      }
+      family_profiles: {
+        Row: {
+          id: string
+          user_id: string
+          relationship: string
+          name: string | null
+          conditions: string[]
+          genetic_traits: string[]
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          relationship: string
+          name?: string | null
+          conditions?: string[]
+          genetic_traits?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          relationship?: string
+          name?: string | null
+          conditions?: string[]
+          genetic_traits?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      trend_snapshots: {
+        Row: {
+          id: string
+          user_id: string
+          parameter_id: string
+          current_value: number
+          previous_value: number | null
+          percent_change: number | null
+          trend_direction: 'improving' | 'stable' | 'worsening' | null
+          current_date: string
+          previous_date: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          parameter_id: string
+          current_value: number
+          previous_value?: number | null
+          percent_change?: number | null
+          trend_direction?: 'improving' | 'stable' | 'worsening' | null
+          current_date: string
+          previous_date?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          parameter_id?: string
+          current_value?: number
+          previous_value?: number | null
+          percent_change?: number | null
+          trend_direction?: 'improving' | 'stable' | 'worsening' | null
+          current_date?: string
+          previous_date?: string | null
+          created_at?: string
+        }
+      }
       radiology_scans: {
         Row: {
           ai_provider: string | null
@@ -54,143 +268,24 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calculate_trend: {
+        Args: {
+          p_user_id: string
+          p_parameter_id: string
+          p_current_value: number
+          p_current_date: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
     }
-    CompositeTypes: {
-      [_ in never]: never
-    }
   }
 }
-
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
-
-export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
-    }
-    ? R
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
-
-export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
-
-export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
-
-export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
-
-export const Constants = {
-  public: {
-    Enums: {},
-  },
-} as const

@@ -4,8 +4,7 @@
  */
 
 import { validateParameter, analyzeRelationships, type MedicalResult, type PatientContext } from '@/medical-core/validation-engine';
-import { getInterpretation, getRecommendations } from '@/lib/content/medical-content';
-import { getRelationshipInterpretation } from './relationship-interpreter';
+import { getInterpretation, getRecommendations, getRelationshipInterpretation } from '@/lib/content/medical-content';
 import type { CBCFormData, CBCAnalysis, CBCResult } from '@/types/cbc.types';
 import type { BloodTestFormData, BloodTestAnalysis, BloodTestResult } from '@/types/blood-test.types';
 import { supabase } from '@/integrations/supabase/client';

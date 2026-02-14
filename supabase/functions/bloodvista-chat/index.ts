@@ -73,28 +73,29 @@ const providerConfigs: Record<AIProvider, ProviderConfig> = {
   gemini: {
     url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
     model: "gemini-1.5-flash",
-    getHeaders: (apiKey: string) => ({
-      "x-goog-api-key": apiKey,
+    getHeaders: (_apiKey: string) => ({
       "Content-Type": "application/json",
     }),
     formatBody: (messages: any[], _stream: boolean) => {
       // Convert messages to Gemini format
       const contents = [];
       let systemContent = '';
-      
+
       for (const m of messages) {
         if (m.role === 'system') {
           systemContent = m.content;
         } else {
           contents.push({
             role: m.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: m.role === 'user' && systemContent && contents.length === 0 
-              ? `${systemContent}\n\n${m.content}` 
-              : m.content }]
+            parts: [{
+              text: m.role === 'user' && systemContent && contents.length === 0
+                ? `${systemContent}\n\n${m.content}`
+                : m.content
+            }]
           });
         }
       }
-      
+
       return { contents };
     },
     parseResponse: (data: any) => data.candidates?.[0]?.content?.parts?.[0]?.text || '',
@@ -145,7 +146,7 @@ const getActiveProvider = (requestedProvider?: string): AIProvider | null => {
       return provider;
     }
   }
-  
+
   // Otherwise, find the first provider with an available API key
   const providers: AIProvider[] = ['openai', 'gemini', 'claude'];
   for (const provider of providers) {
@@ -153,7 +154,7 @@ const getActiveProvider = (requestedProvider?: string): AIProvider | null => {
       return provider;
     }
   }
-  
+
   return null;
 };
 
@@ -165,11 +166,11 @@ serve(async (req) => {
 
   try {
     const { messages, provider: requestedProvider, stream = false } = await req.json();
-    
-    console.log("BloodVista Chat request received:", { 
-      messageCount: messages?.length, 
-      requestedProvider, 
-      stream 
+
+    console.log("BloodVista Chat request received:", {
+      messageCount: messages?.length,
+      requestedProvider,
+      stream
     });
 
     if (!messages || !Array.isArray(messages)) {
@@ -181,19 +182,19 @@ serve(async (req) => {
     }
 
     const activeProvider = getActiveProvider(requestedProvider);
-    
+
     if (!activeProvider) {
       console.error("No AI provider API key configured");
       return new Response(
-        JSON.stringify({ 
-          error: "No AI provider configured. Please set OPENAI_API_KEY, GEMINI_API_KEY, or ANTHROPIC_API_KEY in your environment variables." 
+        JSON.stringify({
+          error: "No AI provider configured. Please set OPENAI_API_KEY, GEMINI_API_KEY, or ANTHROPIC_API_KEY in your environment variables."
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     console.log("Using AI provider:", activeProvider);
-    
+
     const config = providerConfigs[activeProvider];
     const apiKey = getApiKey(activeProvider)!;
 
@@ -205,8 +206,13 @@ serve(async (req) => {
 
     // Make request to AI provider
     console.log("Calling AI API:", config.url);
-    
-    const response = await fetch(config.url, {
+
+    // For Gemini, add API key to URL; for others, use headers
+    const apiUrl = activeProvider === 'gemini'
+      ? `${config.url}?key=${apiKey}`
+      : config.url;
+
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: config.getHeaders(apiKey),
       body: JSON.stringify(config.formatBody(fullMessages, stream)),
@@ -215,21 +221,21 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`${activeProvider} API error:`, response.status, errorText);
-      
+
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      
+
       if (response.status === 401 || response.status === 403) {
         return new Response(
           JSON.stringify({ error: "Invalid API key. Please check your configuration." }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      
+
       return new Response(
         JSON.stringify({ error: `AI service error: ${response.status}` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -247,14 +253,14 @@ serve(async (req) => {
     // Parse non-streaming response
     const data = await response.json();
     const content = config.parseResponse(data);
-    
+
     console.log("AI response received, length:", content.length);
-    
+
     return new Response(
       JSON.stringify({ content, provider: activeProvider }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-    
+
   } catch (error) {
     console.error("BloodVista chat error:", error);
     return new Response(
